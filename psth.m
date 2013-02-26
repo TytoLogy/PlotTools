@@ -143,14 +143,14 @@ for trial = 1:ntrials
 	end
 end
 % ...and compute final H value
-H = sum(Htrial);
+H = sum(Htrial, 1);
 
 %--------------------------------------------------------------------
 % assign outputs (or plot)
 %--------------------------------------------------------------------
 if nargout == 0
 	% just plot the psth, since no output args were asked for
-	plot(bins, H);
+	bar(bins, H, 1);
 	return
 end
 % otherwise, assign output vars.
