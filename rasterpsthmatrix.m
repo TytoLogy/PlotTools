@@ -179,9 +179,15 @@ for row = 1:Nrows
 		% compute psth
 
 		% build psth from spike data and plot using bar() function
+		% modified call to use full time limits after updating psth function
+		% 25 Feb 2013 (SJS)
 		[tmpvals, tmpbins] = psth(	Spikes{row, col}, ...
 											plotopts.psth_binwidth, ...
-											plotopts.timelimits(2));
+											plotopts.timelimits);
+%%%%% OLD
+% 		[tmpvals, tmpbins] = psth(	Spikes{row, col}, ...
+% 											plotopts.psth_binwidth, ...
+% 											plotopts.timelimits(2));
 		psthdata.histvals{row, col} = tmpvals;
 		psthdata.bins{row, col} = tmpbins;
 		psthdata.maxval(row, col) = max(tmpvals);

@@ -57,27 +57,28 @@ function [H, Hrep] = rasterplot(spiketimes, timeMinMax, ticksymbol, ticksize, ti
 % 		-	added return value of handles to plot
 % 	13 July, 2011 (SJS)
 % 		-	added ticksize input argument and code to change tick size
-%------------------------------------------------------------------------
-% TO DO:
+%	25 Feb 2013 (SJS): some cleanup
 %------------------------------------------------------------------------
 
+%------------------------------------------------------------
+% Defaults
+%------------------------------------------------------------
 TICKASCII = double('|');
 TICKSIZE = 10;
 TICKCOLOR = 'b';
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------
 % some checks on inputs
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%------------------------------------------------------------
 % check if figure handle was provided at input
 if exist('axesHandle', 'var')
 	% if so, make sure it is a proper handle, if not, create new figure
 	if ishandle(axesHandle)
 		H = gca(axesHandle);
-		
+	% otherwise create axis		
 	elseif isempty(axesHandle)
 		H = gca;
-		
+	% or throw error
 	else
 		warning([mfilename ': invalid input axes handle, creating new handle']);
 		H = gca;
@@ -96,60 +97,82 @@ if ~exist('timeMinMax', 'var')
 else
 	maxtimeSearchFlag = 0;
 end
-
-if ~exist('ticksymbol')
+% check if ticksymbol was provided
+if ~exist('ticksymbol', 'var')
 	ticksymbol = TICKASCII;
 end
-
+% check if ticksize was user-specified
 if ~exist('ticksize', 'var')
 	ticksize = TICKSIZE;
 end
+% check for tickcolor
 if ~exist('tickcolor', 'var')
 	tickcolor = TICKCOLOR;
 end
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------
 % draw plot
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------
 
-% get size of spiketimes
-nReps = length(spiketimes);
+% check if spiketimes is a cell
+if iscell(spiketimes)
+	% if so use length of spiketimes as # of reps
+	nReps = length(spiketimes);
+else
+	% otherwise, nReps = 1 and convert array of spiketimes to cell
+	nReps = 1;
+	spiketimes = {spiketimes};
+end
 
+% create Hrep output if necessary
 if nargout > 1
 	Hrep = cell(nReps, 1);
 end
 
+% first need to find max time if asked by user
+if maxtimeSearchFlag
+	% convert to matrix
+	tmpval = cell2mat(spiketimes);
+	% if it's not empty, find max
+	if ~isempty(tmpval)
+		if isvector(tmpval)
+			% if vector, simple max value is ok
+			timeMinMax(2) = max(tmpval);
+		else
+			% otherwise, need overall max
+			timeMinMax(2) = max(max(tmpval));
+		end
+	end
+	clear tmpval;
+end
+
+
 % loop through reps
 ry = nReps;
 for r = 1:nReps
+	valid_indices = (spiketimes{r} >= timeMinMax(1)) & ...
+							(spiketimes{r} <= timeMinMax(2));
+	% find the timestamps in range of timeMinMax(1) and timeMinMax(2)
+	ts = spiketimes{r}(valid_indices);	
 	% x locations for ticks == spike times
-	xlocs = spiketimes{r};
+	xlocs = ts;
 	% ylocations are set by rep index (r)
-	ylocs = (ry)*ones(size(spiketimes{r}));
+	ylocs = (ry)*ones(size(ts));
 	% need a row vector of ticks due to a peculiarity of the text() function
 	% in Matlab 
-	tickchars = char(ticksymbol * ones(length(spiketimes{r}), 1));
-	
+	tickchars = char(ticksymbol * ones(length(ts), 1));
 	% draw the ticks, return a vector of handles
 	h = text(xlocs, ylocs, tickchars, 'Interpreter', 'none');
 	% use the handles vector to set color
 	set(h, 'Color', tickcolor);
 	set(h, 'FontSize', ticksize);
-
+	% assign to output if needed
 	if nargout > 1
 		Hrep{r} = h;
 	end
-	
+	% decrement rep counter
 	ry = ry - 1;
-	% get the time limit if it wasn't specified by the user
-	if maxtimeSearchFlag
-		if max(spiketimes{r}) > timeMinMax(2)
-			timeMinMax(2) = max(spiketimes{r});
-		end
-	end
 end
-
 % set x limit to manual, set limit
 xlim('manual')
 xlim(timeMinMax);
