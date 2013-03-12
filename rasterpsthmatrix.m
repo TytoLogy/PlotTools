@@ -72,6 +72,9 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 %	15 Feb, 2013(SJS)
 %	 -	fixed default/varargin settings of plotopts
 %	 -	cleaned up code, added comments
+%	12 Mar 2013 (SJS)
+%		added check of max y value for psth - if 0, resets to 1 to avoid
+%		ylim() error
 %------------------------------------------------------------------------
 % TO DO:
 %------------------------------------------------------------------------
@@ -196,8 +199,12 @@ end
 
 % find the overall maximum value in psthdata.maxval matrix and build ylimit
 % vector
-psthdata.ylimits = [0 max(max(psthdata.maxval))];
-
+maxPSTHval = max(max(psthdata.maxval));
+if maxPSTHval == 0
+	warning('%s: maxPSTHval == 0... using 1...');
+	maxPSTHval = 1;
+end
+psthdata.ylimits = [0 maxPSTHval];
 %----------------------------------------------------------------------------
 % Now, plot the data
 %----------------------------------------------------------------------------
@@ -269,6 +276,7 @@ for row = 1:Nrows
 		xlim(plotopts.timelimits)
 		% set ylimits to overall value in psthdata
 		ylim(psthdata.ylimits);
+		
 		% turn off x tick labels for all but the bottom row and
 		% turn off y tick labels for all but the left column
 		if row ~= Nrows
