@@ -92,6 +92,10 @@ function varargout = psth(spiketimes, binsize_ms, window_ms, Fs)
 %		MAJOR reworking to allow for spec. of mintime so that	neg. spiketimes 
 %		will work
 % 	 -	uses MATLAB builtin histc to compute histograms
+%	12 Mar 2013 (SJS):
+%		One issue with histc is that final bin is only populated when
+%		value in spiketimes == final bin value.  trying approach
+%		that adds a "dummy" bin and then removes it from final hist.
 %------------------------------------------------------------------------
 
 %--------------------------------------------------------------------
@@ -122,24 +126,31 @@ end
 %--------------------------------------------------------------------
 % create bins vector from mintime, maxtime and binsize
 %--------------------------------------------------------------------
-bins = mintime_ms:binsize_ms:maxtime_ms;
+% add "dummy" bin with maxtime "rounded" up to create even 
+% division by binsize- this will be removed 
+maxtime_new = maxtime_ms + binsize_ms + mod(maxtime_ms, binsize_ms);
+bins = mintime_ms:binsize_ms:maxtime_new;
 nbins = length(bins);
+% list of bins for final H (eliminate extra bin)
+nbins_final = nbins - 1;
+bins_final = bins(1:nbins_final);
 
 %--------------------------------------------------------------------
 % use histc to get histogram values using bins as the "edges"
 % of the histogram bins
 %--------------------------------------------------------------------
 % preallocate Htrial matrix to store results for each spiketimes vector
-Htrial = zeros(ntrials, nbins);
+Htrial = zeros(ntrials, nbins_final);
 % loop through trials...
 for trial = 1:ntrials
 	% need to trap empty matrices
 	if isempty(spiketimes{trial})
 		% if empty, assign zeros...
-		Htrial(trial, :) = zeros(1, nbins);
+		Htrial(trial, :) = zeros(1, nbins_final);
 	else
 		% if not, compute histogram using bins as "edges"
-		Htrial(trial, :) = histc(spiketimes{trial}, bins);
+		Htmp = histc(spiketimes{trial}, bins);
+		Htrial(trial, :) = Htmp(1:nbins_final);
 	end
 end
 % ...and compute final H value
@@ -150,7 +161,7 @@ H = sum(Htrial, 1);
 %--------------------------------------------------------------------
 if nargout == 0
 	% just plot the psth, since no output args were asked for
-	bar(bins, H, 1);
+	bar(bins_final, H, 'histc');
 	return
 end
 % otherwise, assign output vars.
@@ -158,7 +169,7 @@ if any(nargout == [1 2 3])
 	varargout{1} = H';
 end
 if any(nargout == [2 3])
-	varargout{2} = bins';
+	varargout{2} = bins_final';
 end
 if nargout == 3
 	varargout{3} = Htrial';
