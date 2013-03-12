@@ -126,9 +126,9 @@ end
 %--------------------------------------------------------------------
 % create bins vector from mintime, maxtime and binsize
 %--------------------------------------------------------------------
-% add "dummy" bin with maxtime "rounded" up to create even 
-% division by binsize- this will be removed 
-maxtime_new = maxtime_ms + binsize_ms + mod(maxtime_ms, binsize_ms);
+% add "dummy" bin to account for histc behavior with last psth bin 
+%  this will be removed 
+maxtime_new = maxtime_ms + binsize_ms;
 bins = mintime_ms:binsize_ms:maxtime_new;
 nbins = length(bins);
 % list of bins for final H (eliminate extra bin)
@@ -166,11 +166,11 @@ if nargout == 0
 end
 % otherwise, assign output vars.
 if any(nargout == [1 2 3])
-	varargout{1} = H';
+	varargout{1} = H;
 end
 if any(nargout == [2 3])
-	varargout{2} = bins_final';
+	varargout{2} = bins_final;
 end
 if nargout == 3
-	varargout{3} = Htrial';
+	varargout{3} = Htrial;
 end
