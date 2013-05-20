@@ -1,6 +1,9 @@
-function [H, Hrep] = rasterplot(spiketimes, timeMinMax, ticksymbol, ticksize, tickcolor, axesHandle)
+function [H, Hrep] = rasterplot(spiketimes, timeMinMax, ...
+											ticksymbol, ticksize, tickcolor, ...
+											axesHandle)
 %------------------------------------------------------------------------
-% H = rasterplot(spiketimes, timeMinMax, ticksymbol, ticksize, tickcolor, axesHandle)
+% H = rasterplot(spiketimes, timeMinMax, 
+%						ticksymbol, ticksize, tickcolor, axesHandle)
 %------------------------------------------------------------------------
 % PlotTools toolbox
 %------------------------------------------------------------------------

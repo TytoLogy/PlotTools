@@ -17,6 +17,7 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 % 			psth_binwidth: 5
 % 			raster_tickmarker: '.'
 % 			raster_ticksize: 12
+%			raster_color: [0 0 1]
 % 			horizgap: 0.0500
 % 			vertgap: 0.0550
 % 			plotgap: 0.0125
@@ -75,6 +76,18 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 %	12 Mar 2013 (SJS)
 %		added check of max y value for psth - if 0, resets to 1 to avoid
 %		ylim() error
+%	16 May, 2013 (SJS)
+%		- moved rasterplot function into this m file, renamed to raster
+% 			this was done since some slightly different capabilities are
+% 			required and I didn't want to break anything that relies
+% 			on rasterplot it its current form
+%		- added raster_color to plotopts
+%	20 May, 2013 (SJS)
+% 	 -	if element in Spikes is either a character or NaN, that 
+% 		plot will be skipped (left empty).  
+% 	 -	checks if plotwidth or height are included in plotopts
+% 	 -	added widthscale and heightscale to add scaling to all plots
+%	 -	added vertoffset and horizoffset to shift all plots
 %------------------------------------------------------------------------
 % TO DO:
 %------------------------------------------------------------------------
@@ -87,9 +100,14 @@ defaultopts = struct( ...
 	'psth_binwidth',			5					, ...
 	'raster_tickmarker',		'|'				, ...
 	'raster_ticksize',		10					, ...
+	'raster_color',			[0 0 1]			, ...
 	'horizgap',					0.05				, ...
 	'vertgap',					0.055				, ...
-	'plotgap',					0.0125			...
+	'plotgap',					0.0125			, ...
+	'widthscale',				1					, ...
+	'heightscale',				1					, ...
+	'vertoffset',				0					, ...
+	'horizoffset',				0					...
 );
 
 %-----------------------------------------------------------
@@ -110,8 +128,12 @@ if isempty(varargin)
 	plotopts = defaultopts;
 else
 	plotopts = varargin{1};
-	pfields = {	'timelimits', 'psth_binwidth', 'raster_tickmarker', ...
-					'raster_ticksize', 'horizgap', 'vertgap', 'plotgap'};
+	pfields =	{	'timelimits', 'psth_binwidth', ...
+						'raster_tickmarker', 'raster_ticksize', 'raster_color', ...
+						'horizgap', 'vertgap', 'plotgap', ...
+						'widthscale', 'heightscale', ...
+						'vertoffset', 'horizoffset', ...
+					};
 	% assign provided options to plotopts
 	for n = 1:length(pfields)
 		if ~isfield(varargin{1}, pfields{n})
@@ -121,7 +143,8 @@ else
 end
 
 %----------------------------------------------------------------------------
-% compute plot widths and plot heights
+% compute plot widths and plot heights if values were not provided in
+% plotopts input struct
 %----------------------------------------------------------------------------
 % logic:
 %-----------
@@ -133,16 +156,21 @@ end
 % spaced with horizontal gaps of size plotopts.horizgap and vertical gaps of
 % plotopts.vertgap, compute the width as follows:
 % 
-% 	plotwidth = ([window width] - [# of columns + 1] * [horizgap]) / [# of columns]
+% 	plotwidth = ([window width] - [# of columns + 1] * [horizgap]) / [# of
+% 	columns]
 % 	
 % and the height as follows (noting that the # of plots in the vertical
 % dimension is 2 * Nrows, since there are 2 plots (raster & psth) per row):
 % 
 % 	plotheight = ([window height] - [# of rows + 2] * [vertgap]) / 2*[# of rows]
-% 	 
+% 
 %----------------------------------------------------------------------------
-plotwidth = (1 - ((Ncols+1) * plotopts.horizgap)) / Ncols;
-plotheight = (1 - ((Nrows+2) * plotopts.vertgap)) / (2*Nrows);
+if ~isfield(plotopts, 'plotwidth')
+	plotwidth = plotopts.widthscale * (1 - ((Ncols+1) * plotopts.horizgap)) / Ncols;
+end
+if ~isfield(plotopts, 'plotheight')
+	plotheight = plotopts.heightscale * (1 - ((Nrows+2) * plotopts.vertgap)) / (2*Nrows);
+end
 
 %----------------------------------------------------------------------------
 % compute positions for rasters (pos1) and psths (pos2)
@@ -154,10 +182,15 @@ pos1 = cell(Nrows, Ncols);
 pos2 = cell(Nrows, Ncols);
 
 for r = 1:Nrows
-	ypos1(r) = 1 - r*plotheight - (r-1)*plotheight - r*plotopts.vertgap - (r-1)*plotopts.plotgap; %#ok<AGROW>
+	ypos1(r) = 1 - r*plotheight - (r-1)*plotheight ...
+					- r*plotopts.vertgap - (r-1)*plotopts.plotgap ...
+					- plotopts.vertoffset; %#ok<AGROW>
+	% only need to include vertoffset once
 	ypos2(r) = ypos1(r) - plotheight - plotopts.plotgap; %#ok<AGROW>
 	for c = 1:Ncols
-		xpos(c) = plotopts.horizgap + ((c-1) * (plotwidth + plotopts.horizgap)); %#ok<AGROW>
+		xpos(c) = plotopts.horizgap ...
+					 + ((c-1) * (plotwidth + plotopts.horizgap)) ...
+					 + plotopts.horizoffset; %#ok<AGROW>
 		pos1{r, c} = [xpos(c) ypos1(r) plotwidth plotheight];
 		pos2{r, c} = [xpos(c) ypos2(r) plotwidth plotheight];
 	end
@@ -181,19 +214,22 @@ for row = 1:Nrows
 	for col = 1:Ncols
 		% compute psth
 
-		% build psth from spike data and plot using bar() function
-		% modified call to use full time limits after updating psth function
-		% 25 Feb 2013 (SJS)
-		[tmpvals, tmpbins] = psth(	Spikes{row, col}, ...
-											plotopts.psth_binwidth, ...
-											plotopts.timelimits);
-%%%%% OLD
-% 		[tmpvals, tmpbins] = psth(	Spikes{row, col}, ...
-% 											plotopts.psth_binwidth, ...
-% 											plotopts.timelimits(2));
-		psthdata.histvals{row, col} = tmpvals;
-		psthdata.bins{row, col} = tmpbins;
-		psthdata.maxval(row, col) = max(tmpvals);
+		% if Spikes{row, col} is a character or NaN, skip it
+		if ~ischar(Spikes{row, col}) | isnan(Spikes{row, col})
+			% build psth from spike data and plot using bar() function
+			% modified call to use full time limits after updating psth function
+			% 25 Feb 2013 (SJS)
+			[tmpvals, tmpbins] = psth(	Spikes{row, col}, ...
+												plotopts.psth_binwidth, ...
+												plotopts.timelimits);
+	%%%%% OLD
+	% 		[tmpvals, tmpbins] = psth(	Spikes{row, col}, ...
+	% 											plotopts.psth_binwidth, ...
+	% 											plotopts.timelimits(2));
+			psthdata.histvals{row, col} = tmpvals;
+			psthdata.bins{row, col} = tmpbins;
+			psthdata.maxval(row, col) = max(tmpvals);
+		end
 	end
 end
 
@@ -219,80 +255,86 @@ for row = 1:Nrows
 		%-------------------------------------------------------
 		% First, plot raster for this row and column
 		%-------------------------------------------------------
-		% select subplot location for rasters (pos1)
-		subplot('Position', pos1{row, col});
-		% store the axes handle returned by rasterplot in the handles2 cell array
-		handles1{row, col} = rasterplot(	Spikes{row, col}, ...
-													plotopts.timelimits, ...
-													plotopts.raster_tickmarker, ...
-													plotopts.raster_ticksize);
-		% turn off xtick labels, and turn off yticks
-		set(gca, 'XTickLabel', []);
-		set(gca, 'ytick', []);
-		% if id label provided in plotopts, display it at col 1, row 1
-		if isfield(plotopts, 'idlabel')
- 			if (col == 1) && (row == 1)
-				idstr = plotopts.idlabel;
+		% if Spikes{row, col} is a character or NaN, skip it
+		if ~ischar(Spikes{row, col}) | isnan(Spikes{row, col})
+
+			% select subplot location for rasters (pos1)
+			subplot('Position', pos1{row, col});
+			% store the axes handle returned by raster in the handles2 cell array
+			handles1{row, col} = raster(	Spikes{row, col}, ...
+														plotopts.timelimits, ...
+														plotopts.raster_tickmarker, ...
+														plotopts.raster_ticksize, ...
+														plotopts.raster_color );
+			% turn off xtick labels, and turn off yticks
+			set(gca, 'XTickLabel', []);
+			set(gca, 'ytick', []);
+			% if id label provided in plotopts, display it at col 1, row 1
+			if isfield(plotopts, 'idlabel')
+				if (col == 1) && (row == 1)
+					idstr = plotopts.idlabel;
+				else
+					idstr = '';
+				end
 			else
 				idstr = '';
 			end
-		else
-			idstr = '';
-		end
-		% if columnlabel was given, plot on row 1 plots
-		if isfield(plotopts, 'columnlabels')
- 			if (row == 1)
-				colstr = plotopts.columnlabels{col};
+			% if columnlabel was given, plot on row 1 plots
+			if isfield(plotopts, 'columnlabels')
+				if (row == 1)
+					colstr = plotopts.columnlabels{col};
+				else
+					colstr = '';
+				end
 			else
 				colstr = '';
 			end
-		else
-			colstr = '';
-		end
-		% if row labels given in plotopts, display on y label of column 1
-		% plots
-		if isfield(plotopts, 'rowlabels')
-			if col == 1
-				rowstr = plotopts.rowlabels{row};
-			else 
+			% if row labels given in plotopts, display on y label of column 1
+			% plots
+			if isfield(plotopts, 'rowlabels')
+				if col == 1
+					rowstr = plotopts.rowlabels{row};
+				else 
+					rowstr = '';
+				end
+			else
 				rowstr = '';
 			end
-		else
-			rowstr = '';
-		end
-		% place text on plots
-		titlestr = [idstr ' ' colstr ];
-		title(titlestr, 'Interpreter', 'none')
-		ylabel(rowstr, 'Interpreter', 'none')
-	
-		%-------------------------------------------------------
-		% then, plot psth
-		%-------------------------------------------------------
-		% select subplot location for psth (pos2)
-		subplot('Position', pos2{row, col});
-		% store the axes handle returned by bar in the handles2 cell array
-		handles2{row, col} = bar(psthdata.bins{row, col}, psthdata.histvals{row, col});
-		% update time limits to match raster
-		xlim(plotopts.timelimits)
-		% set ylimits to overall value in psthdata
-		ylim(psthdata.ylimits);
-		
-		% turn off x tick labels for all but the bottom row and
-		% turn off y tick labels for all but the left column
-		if row ~= Nrows
-			set(gca, 'XTickLabel', []);
-		end
-		if col ~= 1
-			set(gca, 'ytick', []);
-		end
-		set(gca, 'Box', 'off')
-		% label the x-axis 'msec' on the lower left psth plot
-		if (col == 1) && (row == Nrows)
-			xlabel('msec')
-		end
-		% label the lower right plot axes with the input data file 
-		if (col == Ncols) && (row == Nrows)  && isfield(plotopts, 'filelabel')
-			xlabel(plotopts.filelabel, 'Interpreter', 'none');
+			% place text on plots
+			titlestr = [idstr ' ' colstr ];
+			title(titlestr, 'Interpreter', 'none')
+			ylabel(rowstr, 'Interpreter', 'none')
+
+			%-------------------------------------------------------
+			% then, plot psth
+			%-------------------------------------------------------
+			% select subplot location for psth (pos2)
+			subplot('Position', pos2{row, col});
+			% store the axes handle returned by bar in the handles2 cell array
+			handles2{row, col} = ...
+								bar(psthdata.bins{row, col}, psthdata.histvals{row, col});
+			% update time limits to match raster
+			xlim(plotopts.timelimits)
+			% set ylimits to overall value in psthdata
+			ylim(psthdata.ylimits);
+
+			% turn off x tick labels for all but the bottom row and
+			% turn off y tick labels for all but the left column
+			if row ~= Nrows
+				set(gca, 'XTickLabel', []);
+			end
+			if col ~= 1
+				set(gca, 'ytick', []);
+			end
+			set(gca, 'Box', 'off')
+			% label the x-axis 'msec' on the lower left psth plot
+			if (col == 1) && (row == Nrows)
+				xlabel('msec')
+			end
+			% label the lower right plot axes with the input data file 
+			if (col == Ncols) && (row == Nrows)  && isfield(plotopts, 'filelabel')
+				xlabel(plotopts.filelabel, 'Interpreter', 'none');
+			end
 		end
 	end		% END OF col LOOP
 end		% END OF row LOOP
@@ -312,3 +354,134 @@ if nargout == 2
 	plotopts.psthlimits = psthdata.ylimits;
 end
 
+
+
+
+%------------------------------------------------------------
+%------------------------------------------------------------
+function [H, Hrep] = raster(spiketimes, timeMinMax, ...
+										ticksymbol, ticksize, tickcolor, ...
+										offset)
+%------------------------------------------------------------
+% Defaults
+%------------------------------------------------------------
+TICKASCII = double('|');
+TICKSIZE = 10;
+TICKCOLOR = 'b';
+OFFSET = 0;
+
+%------------------------------------------------------------
+% some checks on inputs
+%------------------------------------------------------------
+% check if figure handle was provided at input
+if exist('axesHandle', 'var')
+	% if so, make sure it is a proper handle, if not, create new figure
+	if ishandle(axesHandle)
+		H = gca(axesHandle);
+	% otherwise create axis		
+	elseif isempty(axesHandle)
+		H = gca;
+	% or throw error
+	else
+		warning([mfilename ': invalid input axes handle, creating new handle']);
+		H = gca;
+	end
+else
+	% otherwise, create axes, save handle to return as output of function
+	H = gca;
+end
+
+cla
+
+% check if timeMaxMin was specified
+if ~exist('timeMinMax', 'var')
+	timeMinMax = [0 0];
+	maxtimeSearchFlag = 1;
+else
+	maxtimeSearchFlag = 0;
+end
+% check if ticksymbol was provided
+if ~exist('ticksymbol', 'var')
+	ticksymbol = TICKASCII;
+end
+% check if ticksize was user-specified
+if ~exist('ticksize', 'var')
+	ticksize = TICKSIZE;
+end
+% check for tickcolor
+if ~exist('tickcolor', 'var')
+	tickcolor = TICKCOLOR;
+end
+
+%------------------------------------------------------------
+% draw plot
+%------------------------------------------------------------
+
+% check if spiketimes is a cell
+if iscell(spiketimes)
+	% if so use length of spiketimes as # of reps
+	nReps = length(spiketimes);
+else
+	% otherwise, nReps = 1 and convert array of spiketimes to cell
+	nReps = 1;
+	spiketimes = {spiketimes};
+end
+
+% create Hrep output if necessary
+if nargout > 1
+	Hrep = cell(nReps, 1);
+end
+
+% first need to find max time if asked by user
+if maxtimeSearchFlag
+	% convert to matrix
+	tmpval = cell2mat(spiketimes);
+	% if it's not empty, find max
+	if ~isempty(tmpval)
+		if isvector(tmpval)
+			% if vector, simple max value is ok
+			timeMinMax(2) = max(tmpval);
+		else
+			% otherwise, need overall max
+			timeMinMax(2) = max(max(tmpval));
+		end
+	end
+	clear tmpval;
+end
+
+% loop through reps
+ry = nReps+1;
+for r = 1:nReps
+	valid_indices = (spiketimes{r} >= timeMinMax(1)) & ...
+							(spiketimes{r} <= timeMinMax(2));
+	% find the timestamps in range of timeMinMax(1) and timeMinMax(2)
+	ts = spiketimes{r}(valid_indices);	
+	% x locations for ticks == spike times
+	xlocs = ts;
+	% ylocations are set by rep index (r)
+	ylocs = (ry)*ones(size(ts));
+	% need a row vector of ticks due to a peculiarity of the text() function
+	% in Matlab 
+	tickchars = char(ticksymbol * ones(length(ts), 1));
+	% draw the ticks, return a vector of handles
+	h = text(xlocs, ylocs, tickchars, 'Interpreter', 'none');
+	% use the handles vector to set color
+	set(h, 'Color', tickcolor);
+	set(h, 'FontSize', ticksize);
+	% assign to output if needed
+	if nargout > 1
+		Hrep{r} = h;
+	end
+	% decrement rep counter
+	ry = ry - 1;
+end
+% set x limit to manual, set limit
+xlim('manual')
+xlim(timeMinMax);
+% set ylimit to manual, set limit
+ylim('manual');
+ylim([-1*floor(nReps/20) nReps+1]);
+ylim([-1 nReps+1]);
+
+
+	
