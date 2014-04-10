@@ -135,7 +135,11 @@ end
 % first need to find max time if asked by user
 if maxtimeSearchFlag
 	% convert to matrix
-	tmpval = cell2mat(spiketimes);
+	if iscolumn(spiketimes)
+		tmpval = cell2mat(spiketimes');
+	else
+		tmpval = cell2mat(spiketimes);
+	end
 	% if it's not empty, find max
 	if ~isempty(tmpval)
 		if isvector(tmpval)
@@ -165,7 +169,7 @@ for r = 1:nReps
 	% in Matlab 
 	tickchars = char(ticksymbol * ones(length(ts), 1));
 	% draw the ticks, return a vector of handles
-	h = text(xlocs, ylocs, tickchars, 'Interpreter', 'none');
+	h = text(xlocs, ylocs, tickchars, 'Interpreter', 'none', 'HorizontalAlignment', 'center');
 	% use the handles vector to set color
 	set(h, 'Color', tickcolor);
 	set(h, 'FontSize', ticksize);

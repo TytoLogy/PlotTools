@@ -15,6 +15,7 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 %		plotopts		Plot options structure
 % 			timelimits: [0 1000]
 % 			psth_binwidth: 5
+%			psth_color:	[0 0 1]
 % 			raster_tickmarker: '.'
 % 			raster_ticksize: 12
 %			raster_color: [0 0 1]
@@ -25,6 +26,8 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 % 			columnlabels: {7x1 cell}
 % 			rowlabels: {4x1 cell}
 % 			idlabel: 'Unit 11'
+%			stimulus_times: {nrows, ncols}[nstim, 2]
+%			
 % 
 % Output Arguments:
 % 	H				structure of handles to plots figure
@@ -88,8 +91,24 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 % 	 -	checks if plotwidth or height are included in plotopts
 % 	 -	added widthscale and heightscale to add scaling to all plots
 %	 -	added vertoffset and horizoffset to shift all plots
+%	31 May, 2013 (SJS)
+% 	 -	added stimulus_times
+%	3 June 2013 (SJS)
+%	 -	added psth_color, tickdir, ticklabelsize, [x,y]labelsize options
 %------------------------------------------------------------------------
 % TO DO:
+%
+% plotting characters for rasters messes up time alignment with psth
+% when font size > 12 pt.  use this approach instead:
+% plot(a, 1*ones(size(a)), '.')
+% hold off
+% close all
+% plot(a, 1*ones(size(a)), '.', 'MarkerSize', 2)
+% hold on, plot(a, 2*ones(size(a)), '.', 'MarkerSize', 2), hold off
+% ylim([0 3])
+% hold on, plot(1000*rand(size(a)), 3*ones(size(a)), '.', 'MarkerSize', 2), hold off
+% ylim([0 4])
+% get(gca, 'Children')
 %------------------------------------------------------------------------
 
 %-----------------------------------------------------------
@@ -98,6 +117,7 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 defaultopts = struct( ...
 	'timelimits',				[0 1000]			, ...
 	'psth_binwidth',			5					, ...
+	'psth_color',				[0 0 1]			, ...
 	'raster_tickmarker',		'|'				, ...
 	'raster_ticksize',		10					, ...
 	'raster_color',			[0 0 1]			, ...
@@ -107,20 +127,28 @@ defaultopts = struct( ...
 	'widthscale',				1					, ...
 	'heightscale',				1					, ...
 	'vertoffset',				0					, ...
-	'horizoffset',				0					...
+	'horizoffset',				0					, ...
+	'xlabel',					'msec'			, ...
+	'xlabelsize',				8					, ...
+	'ylabel',					''					, ...
+	'ylabelsize',				8					, ...
+	'ticklabelsize',			8					, ...
+	'tickdir',					'out'				...
 );
+
+ONCOLOR = [0 0.75 0];
+OFFCOLOR = [1 0 0];
 
 %-----------------------------------------------------------
 % get dimensions of Spikes cell matrix
 %-----------------------------------------------------------
 [Nrows, Ncols] = size(Spikes);
 fprintf('... %s: creating figure with %d rows, %d columns\n', ...
-																mfilename, Nrows, Ncols)
+															mfilename, Nrows, Ncols)
 % check size
 if ~Nrows || ~Ncols
 	error('%s: error in size of Spikes cell matrix', mfilename)
 end
-
 %-----------------------------------------------------------
 % initialize plotopts struct if not passed in
 %-----------------------------------------------------------
@@ -128,17 +156,41 @@ if isempty(varargin)
 	plotopts = defaultopts;
 else
 	plotopts = varargin{1};
-	pfields =	{	'timelimits', 'psth_binwidth', ...
+	pfields =	{	'timelimits', ...
+						'psth_binwidth', 'psth_color', ...
 						'raster_tickmarker', 'raster_ticksize', 'raster_color', ...
 						'horizgap', 'vertgap', 'plotgap', ...
 						'widthscale', 'heightscale', ...
 						'vertoffset', 'horizoffset', ...
+						'xlabel', 'xlabelsize', ...
+						'ylabel', 'ylabelsize', ...
+						'ticklabelsize', 'tickdir' ...
 					};
 	% assign provided options to plotopts
 	for n = 1:length(pfields)
 		if ~isfield(varargin{1}, pfields{n})
 			plotopts.(pfields{n}) = defaultopts.(pfields{n});
 		end
+	end
+end
+%-----------------------------------------------------------
+% check settings for stimulus_times
+%-----------------------------------------------------------
+if isfield(plotopts, 'stimulus_times')
+	if ~isfield(plotopts, 'stimulus_times_plot')
+		fprintf('%s:\n', mfilename);
+		fprintf('\tstimulus_times provided but stimulus_times_plot not set\n');
+		fprintf('\tusing default (3 == draw stim onset/offset on all plots)\n');
+		plotopts.stimulus_times_plot = 3;
+	end
+	if ~isfield(plotopts, 'stimulus_on_color')
+		plotopts.stimulus_on_color = ONCOLOR;
+	end
+	if ~isfield(plotopts, 'stimulus_off_color')
+		plotopts.stimulus_off_color = OFFCOLOR;
+	end
+	if ~isfield(plotopts, 'stimulus_onoff_pct')
+		plotopts.stimulus_onoff_pct = 90;
 	end
 end
 
@@ -302,8 +354,25 @@ for row = 1:Nrows
 			end
 			% place text on plots
 			titlestr = [idstr ' ' colstr ];
-			title(titlestr, 'Interpreter', 'none')
-			ylabel(rowstr, 'Interpreter', 'none')
+			title(titlestr, 'Interpreter', 'none');
+			ylabel(rowstr, 'Interpreter', 'none', 'FontSize', plotopts.ylabelsize);
+			% plot stimulus onset/offset lines if stimulus_times provided
+			if isfield(plotopts, 'stimulus_times')
+				if any(plotopts.stimulus_times_plot == [1 3])
+					[nstim, tmp] = size(plotopts.stimulus_times{row, col});
+					for t = 1:nstim
+						% get ylimits
+						L = ylim;
+						L(1) = 0.01*plotopts.stimulus_onoff_pct*L(2);
+						onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
+						offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
+						% onset line
+						line(onset.*[1 1], L, 'Color', ONCOLOR);
+						% offset line
+						line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+					end
+				end
+			end
 
 			%-------------------------------------------------------
 			% then, plot psth
@@ -311,34 +380,76 @@ for row = 1:Nrows
 			% select subplot location for psth (pos2)
 			subplot('Position', pos2{row, col});
 			% store the axes handle returned by bar in the handles2 cell array
-			handles2{row, col} = ...
-								bar(psthdata.bins{row, col}, psthdata.histvals{row, col});
+			handles2{row, col} = bar(	psthdata.bins{row, col}, ...
+												psthdata.histvals{row, col}, ...
+												1, ...
+												'EdgeColor', plotopts.psth_color, ...
+												'FaceColor', plotopts.psth_color);
 			% update time limits to match raster
 			xlim(plotopts.timelimits)
 			% set ylimits to overall value in psthdata
 			ylim(psthdata.ylimits);
-
 			% turn off x tick labels for all but the bottom row and
 			% turn off y tick labels for all but the left column
 			if row ~= Nrows
 				set(gca, 'XTickLabel', []);
+			else
+				set(gca, 'FontSize', plotopts.ticklabelsize);
 			end
 			if col ~= 1
 				set(gca, 'ytick', []);
+			else
+				set(gca, 'FontSize', plotopts.ticklabelsize);
 			end
-			set(gca, 'Box', 'off')
+			% set tick direction
+			set(gca, 'TickDir', plotopts.tickdir);
+			% turn off box
+			set(gca, 'Box', 'off');
 			% label the x-axis 'msec' on the lower left psth plot
 			if (col == 1) && (row == Nrows)
-				xlabel('msec')
+				xlabel(plotopts.xlabel, 'Interpreter', 'none', ...
+								'FontSize', plotopts.xlabelsize);
 			end
+			
 			% label the lower right plot axes with the input data file 
-			if (col == Ncols) && (row == Nrows)  && isfield(plotopts, 'filelabel')
-				xlabel(plotopts.filelabel, 'Interpreter', 'none');
+% 			if (col == Ncols) && (row == Nrows)  && isfield(plotopts, 'filelabel')
+% 				xlabel(plotopts.filelabel, 'Interpreter', 'none');
+% 			end
+			% plot stimulus onset/offset lines if stimulus_times provided
+			if isfield(plotopts, 'stimulus_times')
+				if any(plotopts.stimulus_times_plot == [2 3])
+					[nstim, tmp] = size(plotopts.stimulus_times{row, col});
+					for t = 1:nstim
+						% get ylimits
+						L = ylim;
+						L(1) = 0.01*plotopts.stimulus_onoff_pct*L(2);
+						onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
+						offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
+						% onset line
+						line(onset.*[1 1], L, 'Color', ONCOLOR);
+						% offset line
+						line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+					end
+				end
 			end
+			
 		end
 	end		% END OF col LOOP
 end		% END OF row LOOP
 
+
+% plot file title
+if isfield(plotopts, 'filelabel')
+	plotopts.annH = annotation(	'textbox', ...
+											[0 0 0.2 0.05], ...
+											'String', plotopts.filelabel, ...
+											'Interpreter', 'none', ...
+											'FitBoxToText', 'on', ...
+											'HorizontalAlignment', 'left', ...
+											'VerticalAlignment', 'middle', ...
+											'EdgeColor', 'none' 	);
+	
+end
 %-------------------------------------------------------
 % set output values
 %-------------------------------------------------------
@@ -353,15 +464,20 @@ if nargout == 2
 	plotopts.pos2 = pos2;
 	plotopts.psthlimits = psthdata.ylimits;
 end
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 
 
 
 
-%------------------------------------------------------------
-%------------------------------------------------------------
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 function [H, Hrep] = raster(spiketimes, timeMinMax, ...
 										ticksymbol, ticksize, tickcolor, ...
 										offset)
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 %------------------------------------------------------------
 % Defaults
 %------------------------------------------------------------
@@ -464,7 +580,7 @@ for r = 1:nReps
 	% in Matlab 
 	tickchars = char(ticksymbol * ones(length(ts), 1));
 	% draw the ticks, return a vector of handles
-	h = text(xlocs, ylocs, tickchars, 'Interpreter', 'none');
+	h = text(xlocs, ylocs, tickchars, 'Interpreter', 'none', 'HorizontalAlignment', 'center');
 	% use the handles vector to set color
 	set(h, 'Color', tickcolor);
 	set(h, 'FontSize', ticksize);
@@ -482,6 +598,8 @@ xlim(timeMinMax);
 ylim('manual');
 ylim([-1*floor(nReps/20) nReps+1]);
 ylim([-1 nReps+1]);
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 
 
 	
