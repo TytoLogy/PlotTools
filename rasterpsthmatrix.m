@@ -267,7 +267,7 @@ for row = 1:Nrows
 		% compute psth
 
 		% if Spikes{row, col} is a character or NaN, skip it
-		if ~ischar(Spikes{row, col}) | isnan(Spikes{row, col})
+		if ~ischar(Spikes{row, col}) || isnan(Spikes{row, col})
 			% build psth from spike data and plot using bar() function
 			% modified call to use full time limits after updating psth function
 			% 25 Feb 2013 (SJS)
@@ -308,7 +308,7 @@ for row = 1:Nrows
 		% First, plot raster for this row and column
 		%-------------------------------------------------------
 		% if Spikes{row, col} is a character or NaN, skip it
-		if ~ischar(Spikes{row, col}) | isnan(Spikes{row, col})
+		if ~ischar(Spikes{row, col}) || isnan(Spikes{row, col})
 
 			% select subplot location for rasters (pos1)
 			subplot('Position', pos1{row, col});
@@ -356,23 +356,6 @@ for row = 1:Nrows
 			titlestr = [idstr ' ' colstr ];
 			title(titlestr, 'Interpreter', 'none');
 			ylabel(rowstr, 'Interpreter', 'none', 'FontSize', plotopts.ylabelsize);
-			% plot stimulus onset/offset lines if stimulus_times provided
-			if isfield(plotopts, 'stimulus_times')
-				if any(plotopts.stimulus_times_plot == [1 3])
-					[nstim, tmp] = size(plotopts.stimulus_times{row, col});
-					for t = 1:nstim
-						% get ylimits
-						L = ylim;
-						L(1) = 0.01*plotopts.stimulus_onoff_pct*L(2);
-						onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
-						offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
-						% onset line
-						line(onset.*[1 1], L, 'Color', ONCOLOR);
-						% offset line
-						line(offset.*[1 1], L, 'Color', OFFCOLOR);					
-					end
-				end
-			end
 
 			%-------------------------------------------------------
 			% then, plot psth
@@ -389,18 +372,28 @@ for row = 1:Nrows
 			xlim(plotopts.timelimits)
 			% set ylimits to overall value in psthdata
 			ylim(psthdata.ylimits);
-			% turn off x tick labels for all but the bottom row and
-			% turn off y tick labels for all but the left column
+			% turn off x tick labels for all but the bottom row 
 			if row ~= Nrows
 				set(gca, 'XTickLabel', []);
 			else
 				set(gca, 'FontSize', plotopts.ticklabelsize);
+				if isfield(plotopts, 'xtick') && isfield(plotopts, 'xticklabel')
+					set(gca, 'Xtick', plotopts.xtick);
+					set(gca, 'XTickLabel', plotopts.xticklabel);
+				end
 			end
+			
+			% turn off y tick labels for all but the left column
 			if col ~= 1
 				set(gca, 'ytick', []);
 			else
 				set(gca, 'FontSize', plotopts.ticklabelsize);
+				if isfield(plotopts, 'ytick') && isfield(plotopts, 'yticklabel')
+					set(gca, 'Ytick', plotopts.ytick);
+					set(gca, 'YTickLabel', plotopts.yticklabel);
+				end
 			end
+			
 			% set tick direction
 			set(gca, 'TickDir', plotopts.tickdir);
 			% turn off box
@@ -411,27 +404,39 @@ for row = 1:Nrows
 								'FontSize', plotopts.xlabelsize);
 			end
 			
-			% label the lower right plot axes with the input data file 
-% 			if (col == Ncols) && (row == Nrows)  && isfield(plotopts, 'filelabel')
-% 				xlabel(plotopts.filelabel, 'Interpreter', 'none');
-% 			end
 			% plot stimulus onset/offset lines if stimulus_times provided
 			if isfield(plotopts, 'stimulus_times')
 				if any(plotopts.stimulus_times_plot == [2 3])
-					[nstim, tmp] = size(plotopts.stimulus_times{row, col});
-					for t = 1:nstim
+					if iscell(plotopts.stimulus_times)
+						[nstim, tmp] = size(plotopts.stimulus_times{row, col});
+						for t = 1:nstim
+							% get ylimits
+							L = ylim;
+							L(1) = 0.01*plotopts.stimulus_onoff_pct*L(2);
+							onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
+							offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
+							% onset line
+							line(onset.*[1 1], L, 'Color', ONCOLOR);
+							% offset line
+							line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+						end
+					else
 						% get ylimits
 						L = ylim;
 						L(1) = 0.01*plotopts.stimulus_onoff_pct*L(2);
-						onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
-						offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
-						% onset line
-						line(onset.*[1 1], L, 'Color', ONCOLOR);
-						% offset line
-						line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+						if any(length(plotopts.stimulus_times) == [1 2])
+							%draw onset line
+							onset = 1000*plotopts.stimulus_times(1);
+							line(onset.*[1 1], L, 'Color', ONCOLOR);							
+						end
+						if length(plotopts.stimulus_times) == 2
+							% draw offset line
+							offset = 1000*plotopts.stimulus_times(2);
+							line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+						end
 					end
 				end
-			end
+			end	% END OF if isfield(plotopts, 'stimulus_times')
 			
 		end
 	end		% END OF col LOOP
@@ -448,7 +453,7 @@ if isfield(plotopts, 'filelabel')
 											'HorizontalAlignment', 'left', ...
 											'VerticalAlignment', 'middle', ...
 											'EdgeColor', 'none' 	);
-	
+	set(gcf, 'Name', plotopts.filelabel);	
 end
 %-------------------------------------------------------
 % set output values
