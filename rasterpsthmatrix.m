@@ -27,6 +27,8 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 % 			rowlabels: {4x1 cell}
 % 			idlabel: 'Unit 11'
 %			stimulus_times: {nrows, ncols}[nstim, 2]
+%			plot_titles: {nrows, ncols} of strings used for titles
+%			plot_titles_color: {nrows, ncols} of colors used for titles
 %			
 % 
 % Output Arguments:
@@ -95,6 +97,8 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 % 	 -	added stimulus_times
 %	3 June 2013 (SJS)
 %	 -	added psth_color, tickdir, ticklabelsize, [x,y]labelsize options
+%	1 Dec 2014 (SJS)
+%	 - added plot title plotting, envelopes
 %------------------------------------------------------------------------
 % TO DO:
 %
@@ -133,7 +137,11 @@ defaultopts = struct( ...
 	'ylabel',					''					, ...
 	'ylabelsize',				8					, ...
 	'ticklabelsize',			8					, ...
-	'tickdir',					'out'				...
+	'tickdir',					'out'				, ...
+	'plot_titles',				{{}}				, ...
+	'plot_titles_color',		{{}}				, ...
+	'envelopes',				{{}}				, ...
+	'envelope_dt',				[]				 ...	
 );
 
 ONCOLOR = [0 0.75 0];
@@ -149,6 +157,7 @@ fprintf('... %s: creating figure with %d rows, %d columns\n', ...
 if ~Nrows || ~Ncols
 	error('%s: error in size of Spikes cell matrix', mfilename)
 end
+
 %-----------------------------------------------------------
 % initialize plotopts struct if not passed in
 %-----------------------------------------------------------
@@ -156,23 +165,30 @@ if isempty(varargin)
 	plotopts = defaultopts;
 else
 	plotopts = varargin{1};
-	pfields =	{	'timelimits', ...
-						'psth_binwidth', 'psth_color', ...
-						'raster_tickmarker', 'raster_ticksize', 'raster_color', ...
-						'horizgap', 'vertgap', 'plotgap', ...
-						'widthscale', 'heightscale', ...
-						'vertoffset', 'horizoffset', ...
-						'xlabel', 'xlabelsize', ...
-						'ylabel', 'ylabelsize', ...
-						'ticklabelsize', 'tickdir' ...
-					};
-	% assign provided options to plotopts
+	pfields =	fieldnames(defaultopts);
+	% assign missing options from defaultopts to plotopts
 	for n = 1:length(pfields)
-		if ~isfield(varargin{1}, pfields{n})
+		if ~isfield(plotopts, pfields{n})
 			plotopts.(pfields{n}) = defaultopts.(pfields{n});
 		end
 	end
 end
+
+%-----------------------------------------------------------
+% set plot title colors
+%-----------------------------------------------------------
+if ~isempty(plotopts.plot_titles)
+	if isempty(plotopts.plot_titles_color) || ...
+				all(size(plotopts.plot_titles) ~= size(plotopts.plot_titles_color))
+		plotopts.plot_titles_color = cell(Nrows, Ncols);
+		for r = 1:Nrows
+			for c = 1:Ncols
+				plotopts.plot_titles_color{r, c} = [0 0 0];
+			end
+		end
+	end
+end
+
 %-----------------------------------------------------------
 % check settings for stimulus_times
 %-----------------------------------------------------------
@@ -218,10 +234,12 @@ end
 % 
 %----------------------------------------------------------------------------
 if ~isfield(plotopts, 'plotwidth')
-	plotwidth = plotopts.widthscale * (1 - ((Ncols+1) * plotopts.horizgap)) / Ncols;
+	plotopts.plotwidth = plotopts.widthscale * ...
+									(1 - ((Ncols+1) * plotopts.horizgap)) / Ncols;
 end
 if ~isfield(plotopts, 'plotheight')
-	plotheight = plotopts.heightscale * (1 - ((Nrows+2) * plotopts.vertgap)) / (2*Nrows);
+	plotopts.plotheight = plotopts.heightscale * ...
+									(1 - ((Nrows+2) * plotopts.vertgap)) / (2*Nrows);
 end
 
 %----------------------------------------------------------------------------
@@ -232,19 +250,18 @@ end
 %----------------------------------------------------------------------------
 pos1 = cell(Nrows, Ncols);
 pos2 = cell(Nrows, Ncols);
-
 for r = 1:Nrows
-	ypos1(r) = 1 - r*plotheight - (r-1)*plotheight ...
+	ypos1(r) = 1 - r*plotopts.plotheight - (r-1)*plotopts.plotheight ...
 					- r*plotopts.vertgap - (r-1)*plotopts.plotgap ...
 					- plotopts.vertoffset; %#ok<AGROW>
 	% only need to include vertoffset once
-	ypos2(r) = ypos1(r) - plotheight - plotopts.plotgap; %#ok<AGROW>
+	ypos2(r) = ypos1(r) - plotopts.plotheight - plotopts.plotgap; %#ok<AGROW>
 	for c = 1:Ncols
 		xpos(c) = plotopts.horizgap ...
-					 + ((c-1) * (plotwidth + plotopts.horizgap)) ...
+					 + ((c-1) * (plotopts.plotwidth + plotopts.horizgap)) ...
 					 + plotopts.horizoffset; %#ok<AGROW>
-		pos1{r, c} = [xpos(c) ypos1(r) plotwidth plotheight];
-		pos2{r, c} = [xpos(c) ypos2(r) plotwidth plotheight];
+		pos1{r, c} = [xpos(c) ypos1(r) plotopts.plotwidth plotopts.plotheight];
+		pos2{r, c} = [xpos(c) ypos2(r) plotopts.plotwidth plotopts.plotheight];
 	end
 end
 
@@ -266,8 +283,8 @@ for row = 1:Nrows
 	for col = 1:Ncols
 		% compute psth
 
-		% if Spikes{row, col} is a character or NaN, skip it
-		if ~ischar(Spikes{row, col}) || isnan(Spikes{row, col})
+		% if Spikes{row, col} is a character, skip it
+		if ~ischar(Spikes{row, col})
 			% build psth from spike data and plot using bar() function
 			% modified call to use full time limits after updating psth function
 			% 25 Feb 2013 (SJS)
@@ -307,9 +324,8 @@ for row = 1:Nrows
 		%-------------------------------------------------------
 		% First, plot raster for this row and column
 		%-------------------------------------------------------
-		% if Spikes{row, col} is a character or NaN, skip it
-		if ~ischar(Spikes{row, col}) || isnan(Spikes{row, col})
-
+		% if Spikes{row, col} is a character, skip it
+		if ~ischar(Spikes{row, col})
 			% select subplot location for rasters (pos1)
 			subplot('Position', pos1{row, col});
 			% store the axes handle returned by raster in the handles2 cell array
@@ -353,10 +369,39 @@ for row = 1:Nrows
 				rowstr = '';
 			end
 			% place text on plots
-			titlestr = [idstr ' ' colstr ];
-			title(titlestr, 'Interpreter', 'none');
-			ylabel(rowstr, 'Interpreter', 'none', 'FontSize', plotopts.ylabelsize);
+			if isempty(idstr) || isempty(colstr)
+				sepstr = '';
+			else
+				sepstr = ' ';
+			end
+			titlestr = [idstr sepstr colstr ];
 
+			% plot titles
+			% check if plot_titles is defined in plotopts
+			if isfield(plotopts, 'plot_titles')
+				% check if plot_titles is empty
+				if ~isempty(plotopts.plot_titles)
+					if ~isempty(plotopts.plot_titles{row, col})
+						if ~isempty(titlestr)
+							title({titlestr, plotopts.plot_titles{row, col}}, ...
+									'Interpreter', 'none', ...
+									'Color', plotopts.plot_titles_color{row, col});
+						else
+							title(plotopts.plot_titles{row, col}, ...
+									'Interpreter', 'none', ...
+									'Color', plotopts.plot_titles_color{row, col});	
+						end
+					end
+				end
+			elseif ~isempty(titlestr)
+				title(titlestr, 'Interpreter', 'none');			
+			end
+			
+			if ~isempty(rowstr)
+				ylabel(rowstr, 'Interpreter', 'none', ...
+									'FontSize', plotopts.ylabelsize);			
+			end
+			
 			%-------------------------------------------------------
 			% then, plot psth
 			%-------------------------------------------------------
@@ -404,11 +449,16 @@ for row = 1:Nrows
 								'FontSize', plotopts.xlabelsize);
 			end
 			
+			% set Tick length
+			if isfield(plotopts, 'ticklength')
+				set(gca, 'TickLength', plotopts.ticklength);
+			end
+			
 			% plot stimulus onset/offset lines if stimulus_times provided
 			if isfield(plotopts, 'stimulus_times')
 				if any(plotopts.stimulus_times_plot == [2 3])
 					if iscell(plotopts.stimulus_times)
-						[nstim, tmp] = size(plotopts.stimulus_times{row, col});
+						[nstim, tmp] = size(plotopts.stimulus_times{row, col}); %#ok<ASGLU>
 						for t = 1:nstim
 							% get ylimits
 							L = ylim;
@@ -416,9 +466,9 @@ for row = 1:Nrows
 							onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
 							offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
 							% onset line
-							line(onset.*[1 1], L, 'Color', ONCOLOR);
+							line(onset.*[1 1], L, 'Color', plotopts.stimulus_on_color);
 							% offset line
-							line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+							line(offset.*[1 1], L, 'Color', plotopts.stimulus_off_color);					
 						end
 					else
 						% get ylimits
@@ -427,20 +477,44 @@ for row = 1:Nrows
 						if any(length(plotopts.stimulus_times) == [1 2])
 							%draw onset line
 							onset = 1000*plotopts.stimulus_times(1);
-							line(onset.*[1 1], L, 'Color', ONCOLOR);							
+							line(onset.*[1 1], L, 'Color', plotopts.stimulus_on_color);							
 						end
 						if length(plotopts.stimulus_times) == 2
 							% draw offset line
 							offset = 1000*plotopts.stimulus_times(2);
-							line(offset.*[1 1], L, 'Color', OFFCOLOR);					
+							line(offset.*[1 1], L, 'Color', plotopts.stimulus_off_color);					
 						end
 					end
 				end
 			end	% END OF if isfield(plotopts, 'stimulus_times')
 			
-		end
+			% plot stimulus envelopes
+			if ~isempty(plotopts.envelopes)
+				% generate time vector
+				tvec = plotopts.envelope_dt(row, col) * ...
+								((1:length(plotopts.envelopes{row, col})) - 1);
+				% plot envelope
+				hold on
+				h1 = plot(tvec, ...
+								0.95*maxPSTHval*...
+								(1 + 0.05*plotopts.envelopes{row, col}), 'm'); %#ok<NASGU>
+				h2 = plot(tvec, ...
+								0.95*maxPSTHval*...
+								(1 - 0.05*plotopts.envelopes{row, col}), 'm'); %#ok<NASGU>
+				% reset ylimits
+				ylim(psthdata.ylimits);
+				hold off
+			end	% END of isempty(plotopts.envelopes)
+
+		else
+			fprintf('%s: Spikes{%d, %d} skipped\n', mfilename, row, col);
+			
+		end	%	END OF if ~ischar(Spikes{row, col}) || ~isnan(Spikes{row, col})
+
 	end		% END OF col LOOP
 end		% END OF row LOOP
+
+drawnow
 
 
 % plot file title
@@ -455,6 +529,17 @@ if isfield(plotopts, 'filelabel')
 											'EdgeColor', 'none' 	);
 	set(gcf, 'Name', plotopts.filelabel);	
 end
+
+% adjust figure size
+if isfield(plotopts, 'position')
+	set(gcf, 'Position', plotopts.position)
+end
+
+% adjust paaper orientation
+if isfield(plotopts, 'PaperOrientation')
+	set(gcf, 'PaperOrientation', plotopts.paperorientation);
+end
+
 %-------------------------------------------------------
 % set output values
 %-------------------------------------------------------
@@ -463,8 +548,6 @@ H.rasters = handles1;
 H.psths = handles2;
 % return plotopts is requested
 if nargout == 2
-	plotopts.plotwidth = plotwidth;
-	plotopts.plotheight = plotheight;
 	plotopts.pos1 = pos1;
 	plotopts.pos2 = pos2;
 	plotopts.psthlimits = psthdata.ylimits;
@@ -472,15 +555,12 @@ end
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 
-
-
-
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 function [H, Hrep] = raster(spiketimes, timeMinMax, ...
 										ticksymbol, ticksize, tickcolor, ...
-										offset)
+										offset) %#ok<INUSD>
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 %------------------------------------------------------------
@@ -489,7 +569,7 @@ function [H, Hrep] = raster(spiketimes, timeMinMax, ...
 TICKASCII = double('|');
 TICKSIZE = 10;
 TICKCOLOR = 'b';
-OFFSET = 0;
+OFFSET = 0; %#ok<NASGU>
 
 %------------------------------------------------------------
 % some checks on inputs
@@ -601,8 +681,8 @@ xlim('manual')
 xlim(timeMinMax);
 % set ylimit to manual, set limit
 ylim('manual');
-ylim([-1*floor(nReps/20) nReps+1]);
-ylim([-1 nReps+1]);
+% ylim([-1*floor(nReps/20) nReps+1]);
+ylim([-2 nReps+1]);
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 

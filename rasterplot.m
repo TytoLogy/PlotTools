@@ -135,11 +135,18 @@ end
 % first need to find max time if asked by user
 if maxtimeSearchFlag
 	% convert to matrix
+	% debugging sjs 2/23/2015
+	% 	if iscolumn(spiketimes)
+	% 		tmpval = cell2mat(spiketimes');
+	% 	else
+	% 		tmpval = cell2mat(spiketimes);
+	% 	end
 	if iscolumn(spiketimes)
-		tmpval = cell2mat(spiketimes');
-	else
 		tmpval = cell2mat(spiketimes);
+	else
+		tmpval = cell2mat(spiketimes');
 	end
+	
 	% if it's not empty, find max
 	if ~isempty(tmpval)
 		if isvector(tmpval)
