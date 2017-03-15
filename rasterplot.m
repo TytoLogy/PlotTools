@@ -1,4 +1,4 @@
-function [H, Hrep] = rasterplot(spiketimes, timeMinMax, ...
+function varargout = rasterplot(spiketimes, timeMinMax, ...
 											ticksymbol, ticksize, tickcolor, ...
 											axesHandle)
 %------------------------------------------------------------------------
@@ -40,11 +40,11 @@ function [H, Hrep] = rasterplot(spiketimes, timeMinMax, ...
 %		tickcolor		color for raster ticks (default is blue)
 % 		axesHandle		handle to axes
 % 
-% Output Arguments:
+% Output Arguments (optional):
 % 	H	handle to plot
 %	Hrep	handles to reps
 %------------------------------------------------------------------------
-% See also: psth
+% See also: psth, rasterpsth_matrix
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -61,6 +61,8 @@ function [H, Hrep] = rasterplot(spiketimes, timeMinMax, ...
 % 	13 July, 2011 (SJS)
 % 		-	added ticksize input argument and code to change tick size
 %	25 Feb 2013 (SJS): some cleanup
+%	31 Mar 2015 (SJS): added code to deal with function outputs in 
+%		a more coherent fashion
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------
@@ -116,7 +118,6 @@ end
 %------------------------------------------------------------
 % draw plot
 %------------------------------------------------------------
-
 % check if spiketimes is a cell
 if iscell(spiketimes)
 	% if so use length of spiketimes as # of reps
@@ -160,7 +161,6 @@ if maxtimeSearchFlag
 	clear tmpval;
 end
 
-
 % loop through reps
 ry = nReps;
 for r = 1:nReps
@@ -194,5 +194,12 @@ xlim(timeMinMax);
 ylim('manual');
 ylim([-1*floor(nReps/20) nReps+1]);
 
-
-	
+%------------------------------------------------------------
+% assign outputs
+%------------------------------------------------------------
+if any(nargout == [1 2])
+	varargout{1} = H;
+end
+if nargout == 2
+	varargout{2} = Hrep;
+end

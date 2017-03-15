@@ -1,4 +1,4 @@
-function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
+function [H, plotopts] = rasterpsthmatrix(Spikes, varargin) %#ok<*STOUT>
 %------------------------------------------------------------------------
 % [H, plotopts] = rasterpsthmatrix(Spikes, plotopts)
 %------------------------------------------------------------------------
@@ -29,7 +29,15 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 %			stimulus_times: {nrows, ncols}[nstim, 2]
 %			plot_titles: {nrows, ncols} of strings used for titles
 %			plot_titles_color: {nrows, ncols} of colors used for titles
-%			
+%			psthtext: {nrows, ncols} structs with following fields for 
+% 							placing text on PSTH plots
+% 					.text		strings to place on plot
+% 					.xy		[x y] locations for text
+% 					.color	string or [r g b] color for text
+% 					.size		size of text (default is 10 pt)
+% 					.font		font name (string)
+% 			rastertext: {nrows, ncols} same as psthtext
+% 				
 % 
 % Output Arguments:
 % 	H				structure of handles to plots figure
@@ -99,6 +107,8 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin)
 %	 -	added psth_color, tickdir, ticklabelsize, [x,y]labelsize options
 %	1 Dec 2014 (SJS)
 %	 - added plot title plotting, envelopes
+%	23 Mar 2015 (SJS)
+%	 - reworked plot title implementation
 %------------------------------------------------------------------------
 % TO DO:
 %
@@ -141,11 +151,13 @@ defaultopts = struct( ...
 	'plot_titles',				{{}}				, ...
 	'plot_titles_color',		{{}}				, ...
 	'envelopes',				{{}}				, ...
-	'envelope_dt',				[]				 ...	
-);
+	'envelope_dt',				[]					, ...	
+	'psthtext',					{{}}					, ...
+	'rastertext',				{{}}					...
+); 
 
-ONCOLOR = [0 0.75 0];
-OFFCOLOR = [1 0 0];
+ONCOLOR = [0 0.75 0]; 
+OFFCOLOR = [1 0 0]; 
 
 %-----------------------------------------------------------
 % get dimensions of Spikes cell matrix
@@ -233,11 +245,11 @@ end
 % 	plotheight = ([window height] - [# of rows + 2] * [vertgap]) / 2*[# of rows]
 % 
 %----------------------------------------------------------------------------
-if ~isfield(plotopts, 'plotwidth')
+if ~isfield(plotopts, 'plotwidth') || isempty(plotopts.plotwidth)
 	plotopts.plotwidth = plotopts.widthscale * ...
 									(1 - ((Ncols+1) * plotopts.horizgap)) / Ncols;
 end
-if ~isfield(plotopts, 'plotheight')
+if ~isfield(plotopts, 'plotheight') || isempty(plotopts.plotheight)
 	plotopts.plotheight = plotopts.heightscale * ...
 									(1 - ((Nrows+2) * plotopts.vertgap)) / (2*Nrows);
 end
@@ -368,7 +380,7 @@ for row = 1:Nrows
 			else
 				rowstr = '';
 			end
-			% place text on plots
+			% check if separator (space) is needed between idstr and colstr
 			if isempty(idstr) || isempty(colstr)
 				sepstr = '';
 			else
@@ -377,20 +389,17 @@ for row = 1:Nrows
 			titlestr = [idstr sepstr colstr ];
 
 			% plot titles
-			% check if plot_titles is defined in plotopts
-			if isfield(plotopts, 'plot_titles')
-				% check if plot_titles is empty
-				if ~isempty(plotopts.plot_titles)
-					if ~isempty(plotopts.plot_titles{row, col})
-						if ~isempty(titlestr)
-							title({titlestr, plotopts.plot_titles{row, col}}, ...
-									'Interpreter', 'none', ...
-									'Color', plotopts.plot_titles_color{row, col});
-						else
-							title(plotopts.plot_titles{row, col}, ...
-									'Interpreter', 'none', ...
-									'Color', plotopts.plot_titles_color{row, col});	
-						end
+			% check if plot_titles is empty
+			if ~isempty(plotopts.plot_titles)
+				if ~isempty(plotopts.plot_titles{row, col})
+					if ~isempty(titlestr)
+						title({titlestr, plotopts.plot_titles{row, col}}, ...
+								'Interpreter', 'none', ...
+								'Color', plotopts.plot_titles_color{row, col});
+					else
+						title(plotopts.plot_titles{row, col}, ...
+								'Interpreter', 'none', ...
+								'Color', plotopts.plot_titles_color{row, col});	
 					end
 				end
 			elseif ~isempty(titlestr)
@@ -400,6 +409,13 @@ for row = 1:Nrows
 			if ~isempty(rowstr)
 				ylabel(rowstr, 'Interpreter', 'none', ...
 									'FontSize', plotopts.ylabelsize);			
+			end
+			
+			% text for raster plot
+			if isfield(plotopts, 'rastertext')
+				if ~isempty(plotopts.rastertext{row, col})
+					addtext(plotopts.rastertext{row, col});
+				end
 			end
 			
 			%-------------------------------------------------------
@@ -506,6 +522,17 @@ for row = 1:Nrows
 				hold off
 			end	% END of isempty(plotopts.envelopes)
 
+			% text for psth plot
+			if isfield(plotopts, 'psthtext')
+				if ~isempty(plotopts.psthtext{row, col})
+					if isempty(plotopts.psthtext{row, col}.xy)
+						plotopts.psthtext{row, col}.xy = ...
+									[0.70*plotopts.timelimits(2) 0.80*maxPSTHval];
+					end
+					addtext(plotopts.psthtext{row, col});
+				end
+			end
+
 		else
 			fprintf('%s: Spikes{%d, %d} skipped\n', mfilename, row, col);
 			
@@ -515,7 +542,6 @@ for row = 1:Nrows
 end		% END OF row LOOP
 
 drawnow
-
 
 % plot file title
 if isfield(plotopts, 'filelabel')
@@ -527,7 +553,8 @@ if isfield(plotopts, 'filelabel')
 											'HorizontalAlignment', 'left', ...
 											'VerticalAlignment', 'middle', ...
 											'EdgeColor', 'none' 	);
-	set(gcf, 'Name', plotopts.filelabel);	
+	set(gcf, 'Name', plotopts.filelabel);
+	set(gcf, 'FileName', plotopts.filelabel);
 end
 
 % adjust figure size
@@ -535,7 +562,7 @@ if isfield(plotopts, 'position')
 	set(gcf, 'Position', plotopts.position)
 end
 
-% adjust paaper orientation
+% adjust paper orientation
 if isfield(plotopts, 'PaperOrientation')
 	set(gcf, 'PaperOrientation', plotopts.paperorientation);
 end
@@ -687,4 +714,36 @@ ylim([-2 nReps+1]);
 %------------------------------------------------------------------------------
 
 
-	
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
+function H = addtext(T)
+if ~isstruct(T)
+	error('%s: not a text struct!', mfilename);
+end
+% create text object
+H = text;
+% set properties
+
+% string
+if isfield(T, 'text')
+	set(H, 'String', T.text);
+end
+% position
+if isfield(T, 'xy')
+	set(H, 'Position', [T.xy(1) T.xy(2) 0]);
+end
+% color
+if isfield(T, 'color')
+	set(H, 'Color', T.color);
+end
+% font size
+if isfield(T, 'size')
+	set(H, 'FontSize', T.size);
+end
+% font name
+if isfield(T, 'font')
+	set(H, 'FontName', T.font);
+end
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
+			
