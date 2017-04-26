@@ -402,7 +402,8 @@ for row = 1:Nrows
 								'Color', plotopts.plot_titles_color{row, col});	
 					end
 				end
-			elseif ~isempty(titlestr)
+			end
+			if ~isempty(titlestr)
 				title(titlestr, 'Interpreter', 'none');			
 			end
 			
