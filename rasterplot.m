@@ -142,12 +142,14 @@ if maxtimeSearchFlag
 	% 	else
 	% 		tmpval = cell2mat(spiketimes);
 	% 	end
-	if iscolumn(spiketimes)
-		tmpval = cell2mat(spiketimes);
-	else
-		tmpval = cell2mat(spiketimes');
-	end
-	
+	% 	if iscolumn(spiketimes)
+	% 		tmpval = cell2mat(spiketimes);
+	% 	else
+	% 		tmpval = cell2mat(spiketimes');
+	% 	end
+	% 	
+	tmpval = cell2mat(reshape(spiketimes, 1, numel(spiketimes)));
+
 	% if it's not empty, find max
 	if ~isempty(tmpval)
 		if isvector(tmpval)
