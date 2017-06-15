@@ -79,7 +79,7 @@ TICKCOLOR = 'b';
 if exist('axesHandle', 'var')
 	% if so, make sure it is a proper handle, if not, create new figure
 	if ishandle(axesHandle)
-		H = gca(axesHandle);
+		H = axesHandle;
 	% otherwise create axis		
 	elseif isempty(axesHandle)
 		H = gca;
