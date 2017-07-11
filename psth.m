@@ -96,6 +96,7 @@ function varargout = psth(spiketimes, binsize_ms, window_ms, Fs)
 %		One issue with histc is that final bin is only populated when
 %		value in spiketimes == final bin value.  trying approach
 %		that adds a "dummy" bin and then removes it from final hist.
+%	11 Jul 2017 (SJS): modified to use "histcounts" if available
 %------------------------------------------------------------------------
 
 %--------------------------------------------------------------------
@@ -123,54 +124,102 @@ else
 	maxtime_ms = window_ms;
 end
 
-%--------------------------------------------------------------------
-% create bins vector from mintime, maxtime and binsize
-%--------------------------------------------------------------------
-% add "dummy" bin to account for histc behavior with last psth bin 
-%  this will be removed 
-maxtime_new = maxtime_ms + binsize_ms;
-bins = mintime_ms:binsize_ms:maxtime_new;
-nbins = length(bins);
-% list of bins for final H (eliminate extra bin)
-nbins_final = nbins - 1;
-bins_final = bins(1:nbins_final);
-
-%--------------------------------------------------------------------
-% use histc to get histogram values using bins as the "edges"
-% of the histogram bins
-%--------------------------------------------------------------------
-% preallocate Htrial matrix to store results for each spiketimes vector
-Htrial = zeros(ntrials, nbins_final);
-% loop through trials...
-for trial = 1:ntrials
-	% need to trap empty matrices
-	if isempty(spiketimes{trial})
-		% if empty, assign zeros...
-		Htrial(trial, :) = zeros(1, nbins_final);
-	else
-		% if not, compute histogram using bins as "edges"
-		Htmp = histc(spiketimes{trial}, bins);
+if exist('histcounts', 'file')
+	%--------------------------------------------------------------------
+	% create edges vector from mintime, maxtime and binsize
+	%--------------------------------------------------------------------
+	edges = mintime_ms:binsize_ms:maxtime_ms;
+	bins = edges(1:end-1) + diff(edges)/2;
+	nbins = length(bins);
+	
+	%--------------------------------------------------------------------
+	% use histcounts to get histogram values using bins as the "edges"
+	% of the histogram bins
+	%--------------------------------------------------------------------
+	% preallocate Htrial matrix to store results for each spiketimes vector
+	Htrial = zeros(ntrials, nbins);
+	% loop through trials...
+	for trial = 1:ntrials
+		% need to trap empty matrices
+		if isempty(spiketimes{trial})
+			% if empty, assign zeros...
+			Htrial(trial, :) = zeros(1, nbins);
+		else
+			Htrial(trial, :) = histcounts(spiketimes{trial}, edges);
+		end
+	end
+	% ...and compute final H value
+	H = sum(Htrial, 1);
+	%--------------------------------------------------------------------
+	% assign outputs (or plot)
+	%--------------------------------------------------------------------
+	if nargout == 0
+		% just plot the psth, since no output args were asked for
+		bar(bins, H, 1);
+		return
+	end
+	% otherwise, assign output vars.
+	if any(nargout == [1 2 3])
+		varargout{1} = H;
+	end
+	if any(nargout == [2 3])
+		varargout{2} = bins;
+	end
+	if nargout == 3
+		varargout{3} = Htrial;
+	end	
+else
+	% USE HISTC
+	%--------------------------------------------------------------------
+	% create bins vector from mintime, maxtime and binsize
+	%--------------------------------------------------------------------
+	% add "dummy" bin to account for histc behavior with last psth bin 
+	%  this will be removed 
+	maxtime_new = maxtime_ms + binsize_ms;
+	bins = mintime_ms:binsize_ms:maxtime_new;
+	nbins = length(bins);
+	% list of bins for final H (eliminate extra bin)
+	nbins_final = nbins - 1;
+	bins_final = bins(1:nbins_final);
+	%--------------------------------------------------------------------
+	% use histc to get histogram values using bins as the "edges"
+	% of the histogram bins
+	%--------------------------------------------------------------------
+	% preallocate Htrial matrix to store results for each spiketimes vector
+	Htrial = zeros(ntrials, nbins_final);
+	% loop through trials...
+	for trial = 1:ntrials
+		% need to trap empty matrices
+		if isempty(spiketimes{trial})
+			% if empty, assign zeros...
+			Htrial(trial, :) = zeros(1, nbins_final);
+		else
+			Htmp = histc(spiketimes{trial}, bins);
+		end
 		Htrial(trial, :) = Htmp(1:nbins_final);
 	end
+	% ...and compute final H value
+	H = sum(Htrial, 1);
+	%--------------------------------------------------------------------
+	% assign outputs (or plot)
+	%--------------------------------------------------------------------
+	if nargout == 0
+		% just plot the psth, since no output args were asked for
+		bar(bins_final, H, 'histc');
+		return
+	end
+	% otherwise, assign output vars.
+	if any(nargout == [1 2 3])
+		varargout{1} = H;
+	end
+	if any(nargout == [2 3])
+		varargout{2} = bins_final;
+	end
+	if nargout == 3
+		varargout{3} = Htrial;
+	end
 end
-% ...and compute final H value
-H = sum(Htrial, 1);
 
-%--------------------------------------------------------------------
-% assign outputs (or plot)
-%--------------------------------------------------------------------
-if nargout == 0
-	% just plot the psth, since no output args were asked for
-	bar(bins_final, H, 'histc');
-	return
-end
-% otherwise, assign output vars.
-if any(nargout == [1 2 3])
-	varargout{1} = H;
-end
-if any(nargout == [2 3])
-	varargout{2} = bins_final;
-end
-if nargout == 3
-	varargout{3} = Htrial;
-end
+
+
+

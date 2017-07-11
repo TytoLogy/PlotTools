@@ -10,6 +10,16 @@ function varargout = stackplot(x, Y, varargin)
 % of Y at the top
 % 
 %------------------------------------------------------------------------
+% Input Arguments:
+%	
+% 	'FIGURE'
+% 	'AXES'
+% 	'LINES'
+% 	'MODE'
+% 	'COLORMODE'
+% 	'YABSSHIFT'
+% 	'YMAX'
+%
 % Output Arguments:
 % 
 %	hL		handles to lineseries objects (from plot() function)

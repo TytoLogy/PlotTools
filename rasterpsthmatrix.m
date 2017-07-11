@@ -414,8 +414,10 @@ for row = 1:Nrows
 			
 			% text for raster plot
 			if isfield(plotopts, 'rastertext')
-				if ~isempty(plotopts.rastertext{row, col})
-					addtext(plotopts.rastertext{row, col});
+				if ~isempty(plotopts.rastertext)
+					if ~isempty(plotopts.rastertext{row, col})
+						addtext(plotopts.rastertext{row, col});
+					end
 				end
 			end
 			
@@ -525,12 +527,14 @@ for row = 1:Nrows
 
 			% text for psth plot
 			if isfield(plotopts, 'psthtext')
-				if ~isempty(plotopts.psthtext{row, col})
-					if isempty(plotopts.psthtext{row, col}.xy)
-						plotopts.psthtext{row, col}.xy = ...
-									[0.70*plotopts.timelimits(2) 0.80*maxPSTHval];
+				if ~isempty(plotopts.psthtext)
+					if ~isempty(plotopts.psthtext{row, col})
+						if isempty(plotopts.psthtext{row, col}.xy)
+							plotopts.psthtext{row, col}.xy = ...
+										[0.70*plotopts.timelimits(2) 0.80*maxPSTHval];
+						end
+						addtext(plotopts.psthtext{row, col});
 					end
-					addtext(plotopts.psthtext{row, col});
 				end
 			end
 
