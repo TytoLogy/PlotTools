@@ -16,7 +16,7 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin) %#ok<*STOUT>
 % 			timelimits: [0 1000]
 % 			psth_binwidth: 5
 %			psth_color:	[0 0 1]
-% 			raster_tickmarker: '.'
+% 			raster_tickmarker: '|'
 % 			raster_ticksize: 12
 %			raster_color: [0 0 1]
 % 			horizgap: 0.0500
