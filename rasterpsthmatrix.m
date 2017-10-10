@@ -37,7 +37,15 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin) %#ok<*STOUT>
 % 					.size		size of text (default is 10 pt)
 % 					.font		font name (string)
 % 			rastertext: {nrows, ncols} same as psthtext
-% 				
+% 			stimulus_times_plot:	2 or 3 plots stimulus onset/offset (not
+% 										sure what 2 or 3 means....?????)
+% 			stimulus_times:	{nrows, ncols} [nstims, 2], where columns
+% 									are onset and offset times in seconds
+% 			stimulus_on_color {nstims}
+%			stimulus_off_color {nstims} colors for stimulus on/off
+% 			stimulus_onoff_pct: [value in %] amount from ylimit(2) to start 
+% 										onset/offset lines. default is 90;
+%			psth_ylimits:	[min max] y-axis limits for psth plots
 % 
 % Output Arguments:
 % 	H				structure of handles to plots figure
@@ -109,6 +117,10 @@ function [H, plotopts] = rasterpsthmatrix(Spikes, varargin) %#ok<*STOUT>
 %	 - added plot title plotting, envelopes
 %	23 Mar 2015 (SJS)
 %	 - reworked plot title implementation
+%	10 Oct 2017 (SJS): 
+% 	 - added functionality for different colored on/off stimulus lines
+% 		(i.e., for use with sound + opto stimulation
+%	 - user can specify psth y-axis limits using plotopts.psth_ylimits
 %------------------------------------------------------------------------
 % TO DO:
 %
@@ -152,8 +164,9 @@ defaultopts = struct( ...
 	'plot_titles_color',		{{}}				, ...
 	'envelopes',				{{}}				, ...
 	'envelope_dt',				[]					, ...	
-	'psthtext',					{{}}					, ...
-	'rastertext',				{{}}					...
+	'psthtext',					{{}}				, ...
+	'rastertext',				{{}}				, ...
+	'psth_ylimits',			[]					...
 ); 
 
 ONCOLOR = [0 0.75 0]; 
@@ -321,7 +334,13 @@ if maxPSTHval == 0
 	warning('%s: maxPSTHval == 0... using 1...');
 	maxPSTHval = 1;
 end
-psthdata.ylimits = [0 maxPSTHval];
+
+if isempty(plotopts.psth_ylimits)
+	psthdata.ylimits = [0 maxPSTHval];
+else
+	psthdata.ylimits = plotopts.psth_ylimits;
+end
+
 %----------------------------------------------------------------------------
 % Now, plot the data
 %----------------------------------------------------------------------------
@@ -477,17 +496,24 @@ for row = 1:Nrows
 			if isfield(plotopts, 'stimulus_times')
 				if any(plotopts.stimulus_times_plot == [2 3])
 					if iscell(plotopts.stimulus_times)
-						[nstim, tmp] = size(plotopts.stimulus_times{row, col}); %#ok<ASGLU>
+						[nstim, ~] = size(plotopts.stimulus_times{row, col});
+						if (nstim > 1) && ...
+									( length(plotopts.stimulus_onoff_pct) == 1 )
+							plotopts.stimulus_onoff_pct = ...
+										plotopts.stimulus_onoff_pct * ones(nstim, 1);
+						end
 						for t = 1:nstim
 							% get ylimits
 							L = ylim;
-							L(1) = 0.01*plotopts.stimulus_onoff_pct*L(2);
+							L(1) = 0.01*plotopts.stimulus_onoff_pct(t)*L(2);
 							onset = 1000*plotopts.stimulus_times{row, col}(t, 1);
 							offset = 1000*plotopts.stimulus_times{row, col}(t, 2);
 							% onset line
-							line(onset.*[1 1], L, 'Color', plotopts.stimulus_on_color);
+							line(onset.*[1 1], L, 'Color', ...
+														plotopts.stimulus_on_color{t});
 							% offset line
-							line(offset.*[1 1], L, 'Color', plotopts.stimulus_off_color);					
+							line(offset.*[1 1], L, 'Color', ...
+														plotopts.stimulus_off_color{t});	
 						end
 					else
 						% get ylimits
@@ -496,12 +522,14 @@ for row = 1:Nrows
 						if any(length(plotopts.stimulus_times) == [1 2])
 							%draw onset line
 							onset = 1000*plotopts.stimulus_times(1);
-							line(onset.*[1 1], L, 'Color', plotopts.stimulus_on_color);							
+							line(onset.*[1 1], L, 'Color', ...
+													plotopts.stimulus_on_color);
 						end
 						if length(plotopts.stimulus_times) == 2
 							% draw offset line
 							offset = 1000*plotopts.stimulus_times(2);
-							line(offset.*[1 1], L, 'Color', plotopts.stimulus_off_color);					
+							line(offset.*[1 1], L, 'Color', ...
+													plotopts.stimulus_off_color);
 						end
 					end
 				end
