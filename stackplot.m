@@ -2,7 +2,7 @@ function varargout = stackplot(x, Y, varargin)
 %------------------------------------------------------------------------
 % [hL, hF, hAx] = stackplot(x, Y, varargin)
 %------------------------------------------------------------------------
-% 
+%  TytoLogy:PlotTools
 %-------------------------------------------------------------------------
 % for a given vector of x-axis values (x) and matrix of y-axis values (Y),
 % plot all y-axis traces (each "channel" in a different column) stacked
