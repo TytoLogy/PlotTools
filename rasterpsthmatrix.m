@@ -496,7 +496,11 @@ for row = 1:Nrows
 			if isfield(plotopts, 'stimulus_times')
 				if any(plotopts.stimulus_times_plot == [2 3])
 					if iscell(plotopts.stimulus_times)
-						[nstim, ~] = size(plotopts.stimulus_times{row, col});
+						try
+							[nstim, ~] = size(plotopts.stimulus_times{row, col});
+						catch
+							keyboard
+						end
 						if (nstim > 1) && ...
 									( length(plotopts.stimulus_onoff_pct) == 1 )
 							plotopts.stimulus_onoff_pct = ...
