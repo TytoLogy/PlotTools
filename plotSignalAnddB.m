@@ -53,13 +53,14 @@ function varargout = plotSignalAnddB(signal, rmswin, Fs, varargin)
 %		- updated comments
 %		- added out struct
 %		- moving to PlotTools
+%	10 Jun 2019 (SJS): fix input arg issue with rmswin
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
 % definitions/defaults
 %-------------------------------------------------------------------------
 VtoPa = 0;
-rmswin = 5;
+% rmswin = 5;
 sigName = '';
 sigColor = 'b';
 sigStyle = '-';
@@ -74,6 +75,13 @@ dBMarkerColor = dBColor;
 
 %-------------------------------------------------------------------------
 % check input arguments
+%-------------------------------------------------------------------------
+if nargin < 3
+	error('%s: need signal, rmswindow and Fs!', mfilename);
+end
+
+%-------------------------------------------------------------------------
+% check variable input arguments
 %-------------------------------------------------------------------------
 nvararg = length(varargin);
 if nvararg
