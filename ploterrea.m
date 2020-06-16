@@ -36,6 +36,7 @@ function varargout = ploterrea(x, y, errlohi)
 % Revisions:
 %	8 May, 2017 (SJS):	added to PlotTools toolbox from spike spectra 
 %								analysis program, cleaned up code, added comments
+%	15 Jun 2020 (SJS):	explicitly set color of line plot to blue
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -81,8 +82,6 @@ elseif ismatrix(errlohi)
 	errcoords = [ (y-errlohi(:, 1)) (y+errlohi(:, 2))];
 end
 
-
-
 % plot area
 ha = area(x, errcoords);
 set(ha(1), 'LineStyle', 'none');
@@ -92,7 +91,7 @@ set(ha(2), 'FaceColor', 0.75 * [1 1 1]);
 
 % plot line
 hold on
-hb = plot(x, y);
+hb = plot(x, y, 'Color', 'b');
 hold off
 
 % return handles
