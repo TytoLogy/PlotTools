@@ -26,6 +26,7 @@ function varargout = plotCurveAndCI(curveStruct, varargin)
 % Created: 28 Mar 2019  (SJS) 
 %	- adapted from plotRLF.m from OptoAnalysis
 % Revisions:
+% 
 %------------------------------------------------------------------------
 
 %---------------------------------------------------------------------

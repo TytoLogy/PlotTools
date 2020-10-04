@@ -7,7 +7,7 @@ function varargout = ploterrea(x, y, errlohi)
 % 
 % Given vectors x, y and NX2 matrix (or vector) errlohi of error/stddev
 % measurements, plot graph of y vs x with area bounded by errlohi (or +/-
-% errlohi if errlohi is a vecotr).
+% errlohi if errlohi is a vector).
 %  
 % Returns [ha hl] where ha is handle to area plot axis and hb is line plot
 % axis
@@ -37,6 +37,8 @@ function varargout = ploterrea(x, y, errlohi)
 %	8 May, 2017 (SJS):	added to PlotTools toolbox from spike spectra 
 %								analysis program, cleaned up code, added comments
 %	15 Jun 2020 (SJS):	explicitly set color of line plot to blue
+%  4 Oct 2020 (SJS): code is doing weird things, replace with
+%  shadedErrorBar from web if this is needed
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -75,17 +77,9 @@ end
 %------------------------------------------------------------------------
 % matrix for error area
 %------------------------------------------------------------------------
-% old
-% if isvector(errlohi)
-% 	errcoords = [ (y-errlohi) (y+errlohi)];
-% elseif ismatrix(errlohi)
-% 	errcoords = [ (y-errlohi(:, 1)) (y+errlohi(:, 2))];
-% end
-
-% new
-if isavector(errlohi)
+if isvector(errlohi)
 	errcoords = [ (y-errlohi) (y+errlohi)];
-else
+elseif ismatrix(errlohi)
 	errcoords = [ (y-errlohi(:, 1)) (y+errlohi(:, 2))];
 end
 
@@ -104,18 +98,6 @@ hold off
 % return handles
 if nargout
 	varargout{1} = [ha hb];
-end
-
-end
-
-function out = isavector(testV)
-	if ndims(testV) > 2 %#ok<ISMAT>
-		out = false;
-	elseif min(size(testV)) == 1
-		out = true;
-	else
-		out = false;
-	end
 end
 
 
