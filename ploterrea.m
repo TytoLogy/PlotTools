@@ -46,7 +46,6 @@ if nargin ~= 3
 	error('%s: needs x, y and error values as inputs!', mfilename);
 end
 
-
 %------------------------------------------------------------------------
 % force x and y to column vector
 %------------------------------------------------------------------------
@@ -76,9 +75,17 @@ end
 %------------------------------------------------------------------------
 % matrix for error area
 %------------------------------------------------------------------------
-if isvector(errlohi)
+% old
+% if isvector(errlohi)
+% 	errcoords = [ (y-errlohi) (y+errlohi)];
+% elseif ismatrix(errlohi)
+% 	errcoords = [ (y-errlohi(:, 1)) (y+errlohi(:, 2))];
+% end
+
+% new
+if isavector(errlohi)
 	errcoords = [ (y-errlohi) (y+errlohi)];
-elseif ismatrix(errlohi)
+else
 	errcoords = [ (y-errlohi(:, 1)) (y+errlohi(:, 2))];
 end
 
@@ -99,3 +106,17 @@ if nargout
 	varargout{1} = [ha hb];
 end
 
+end
+
+function out = isavector(testV)
+	if ndims(testV) > 2 %#ok<ISMAT>
+		out = false;
+	elseif min(size(testV)) == 1
+		out = true;
+	else
+		out = false;
+	end
+end
+
+
+		
