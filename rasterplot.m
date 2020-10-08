@@ -3,7 +3,7 @@ function varargout = rasterplot(spiketimes, timeMinMax, ...
 											axesHandle)
 %------------------------------------------------------------------------
 % H = rasterplot(spiketimes, timeMinMax, 
-%						ticksymbol, ticksize, tickcolor, axesHandle)
+%                      ticksymbol, ticksize, tickcolor, axesHandle)
 %------------------------------------------------------------------------
 % PlotTools toolbox
 %------------------------------------------------------------------------
@@ -63,6 +63,8 @@ function varargout = rasterplot(spiketimes, timeMinMax, ...
 %	25 Feb 2013 (SJS): some cleanup
 %	31 Mar 2015 (SJS): added code to deal with function outputs in 
 %		a more coherent fashion
+%  7 Oct 2020 (SJS): reworked y axis labels, now match trials order from
+%  top to bottom
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------
@@ -195,6 +197,18 @@ xlim(timeMinMax);
 % set ylimit to manual, set limit
 ylim('manual');
 ylim([-1*floor(nReps/20) nReps+1]);
+
+%------------------------------------------------------------
+% flip the y tick labels, since order of trials is from top of axes to
+% bottom
+%------------------------------------------------------------
+% get yaxis labels, flip up down, set new labels
+set(gca, 'YTickLabel', flipud(get(gca, 'YTickLabel')));
+% % 
+% ytl = flipud(ytl);
+% % 
+% set(gca, 'YTickLabel', ytl);
+
 
 %------------------------------------------------------------
 % assign outputs
