@@ -65,6 +65,7 @@ function varargout = rasterplot(spiketimes, timeMinMax, ...
 %		a more coherent fashion
 %  7 Oct 2020 (SJS): reworked y axis labels, now match trials order from
 %  top to bottom
+%  1 Dec 2020 (SJS): added check on flipping y axis labels
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------
@@ -202,12 +203,15 @@ ylim([-1*floor(nReps/20) nReps+1]);
 % flip the y tick labels, since order of trials is from top of axes to
 % bottom
 %------------------------------------------------------------
-% get yaxis labels, flip up down, set new labels
-set(gca, 'YTickLabel', flipud(get(gca, 'YTickLabel')));
-% % 
-% ytl = flipud(ytl);
-% % 
-% set(gca, 'YTickLabel', ytl);
+% need to check if this is necessary (in case of redrawing old plot)
+tmp = get(gca, 'YTickLabel');
+if ~isempty(tmp)
+	% if label for lowest tick is < that for greatest, flip order
+	if str2double(tmp{1}) < str2double(tmp{end})
+		% get yaxis labels, flip up down, set new labels
+		set(gca, 'YTickLabel', flipud(get(gca, 'YTickLabel')));
+	end
+end
 
 
 %------------------------------------------------------------
