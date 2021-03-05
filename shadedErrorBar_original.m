@@ -46,10 +46,6 @@ function varargout=shadedErrorBar(x,y,errBar,lineProps,transparent)
 %
 % Rob Campbell - November 2009
 % https://senselab.med.yale.edu/modeldb/showModel.cshtml?model=185090&file=%2Fgehring2015%2Fextern%2FshadedErrorBar.m#tabs-2
-%
-% Modified for APANalyze, Sharad Shanbhag 4 November, 2020:
-%   - error bars are "absolute" (will not plot y ± errBar)
-%   - 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 % Error checking    
@@ -120,10 +116,8 @@ else
 end
 
 %Calculate the error bars
-% uE=y+errBar(1,:);
-% lE=y-errBar(2,:);
-uE = errBar(1,:);
-lE = errBar(2,:);
+uE=y+errBar(1,:);
+lE=y-errBar(2,:);
 
 %Add the patch error bar
 holdStatus=ishold;
