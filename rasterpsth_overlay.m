@@ -1,9 +1,9 @@
 function varargout = rasterpsth_overlay(spiketimes, bin_ms, ...
-					xrange, yrange, barcolor, tickColor, tickSize, ...
+					xrange, raster_yrange, barcolor, tickColor, tickSize, ...
 					tickSymbol, tstr)
 % [psthvalues, bins, psth_bar_handle, raster_handle] =  
 % 		rasterpsth_overlay(spiketimes, bin_ms, ...
-% 					xrange, yrange, barcolor, tickColor, tickSize, ...
+% 					xrange, raster_yrange, barcolor, tickColor, tickSize, ...
 % 					tickSymbol, tstr)
 
 [P, bins] = psth(spiketimes, bin_ms, xrange);
@@ -18,8 +18,8 @@ xlabel('ms');
 yyaxis right
 R = rasterplot(spiketimes, xrange, tickSymbol, tickSize, tickColor);
 set(R, 'YColor', tickColor);
-if ~isempty(yrange)
-	ylim(yrange);
+if ~isempty(raster_yrange)
+	ylim(raster_yrange);
 end
 
 if ~isempty(tstr)
