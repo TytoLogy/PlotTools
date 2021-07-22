@@ -1,6 +1,6 @@
 function varargout = rasterpsth_overlay(spiketimes, bin_ms, ...
 					xrange, raster_yrange, barcolor, tickColor, tickSize, ...
-					tickSymbol, tstr)
+					tickSymbol, tstr)            
 % [psthvalues, bins, psth_bar_handle, raster_handle] =  
 % 		rasterpsth_overlay(spiketimes, bin_ms, ...
 % 					xrange, raster_yrange, barcolor, tickColor, tickSize, ...
@@ -27,7 +27,9 @@ if ~isempty(tstr)
 end
 ylabel('trial');
 
-varargout{1} = P;
-varargout{2} = bins;
-varargout{3} = B;
-varargout{4} = R;
+if nargout > 0
+   varargout{1} = P;
+   varargout{2} = bins;
+   varargout{3} = B;
+   varargout{4} = R;
+end
