@@ -34,7 +34,7 @@ function varargout = plotCurveAndCI(curveStruct, varargin)
 %---------------------------------------------------------------------
 
 dataToPlot = 'MEAN';
-
+figH = [];
 %---------------------------------------------------------------------
 % Parse inputs
 %---------------------------------------------------------------------
@@ -48,6 +48,14 @@ if nargin > 1
 			case {'MEDIAN', 'MED'}
 				dataToPlot = 'MEDIAN';
 				argIndx = argIndx + 1;
+         case {'FIG', 'FIGH', 'FIGHANDLE', 'HANDLE', 'H'}
+            if isgraphics(varargin{argIndx+1}, 'figure')
+               figH = varargin{argIndx+1};
+            else
+               warning('argument to %s is not a figure handle!', ...
+                           varargin{argIndx});
+            end
+				argIndx = argIndx + 2;
 			otherwise
 				error('%s: unknown option %s', mfilename, varargin{argIndx});
 		end
@@ -64,8 +72,12 @@ for l = 1:length(curveStruct.xdata)
 	end
 end
 
-% create figure
-H = figure;
+% create figure if necessary
+if isempty(figH)
+   figH = figure;
+else
+   figure(figH);
+end
 
 % plot mean
 if strcmpi(dataToPlot, 'MEAN')
@@ -81,7 +93,7 @@ xlabel(curveStruct.xlabel)
 grid on
 	
 if nargout
-	varargout{1} = H;
+	varargout{1} = figH;
 	if nargout >= 2
 		varargout{2} = cimatrix;
 	end
