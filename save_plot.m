@@ -45,23 +45,33 @@ if nargin ~= 3
 	error('save_plot: need 3 input args, fig handle, format and path');
 end
 
+% convert outputFormat to cell if it is a simple char string
+if ~iscell(outputFormat)
+   if ischar(outputFormat)
+      outputFormat = {outputFormat};
+   end
+end
 
-if ~any(strcmpi(outputFormat, {'PNG', 'PDF', 'FIG'}))
-	% if format is invalid, throw error
-	error('save_plot: unknown save format %s', outputFormat);
+% if format is invalid, throw error
+for s = 1:length(outputFormat)
+   if ~any(strcmpi(outputFormat{s}, {'PNG', 'PDF', 'FIG'}))
+   	error('save_plot: unknown save format %s', outputFormat{s});
+   end
 end
 
 % get figure name from handle and append to output path
 pname = fullfile(outputPath, get(figH, 'Name'));
 
-% save plot
-switch upper(outputFormat)
-	case 'FIG'
-		savefig(figH, pname, 'compact');
-	case 'PDF'
-		print(figH, pname, '-dpdf');
-	case 'PNG'
-		print(figH, pname, '-dpng', '-r300');
+% save plot in desired format(s)
+for s = 1:length(outputFormat)
+   switch upper(outputFormat{s})
+	   case 'FIG'
+		   savefig(figH, pname, 'compact');
+	   case 'PDF'
+		   print(figH, pname, '-dpdf');
+	   case 'PNG'
+		   print(figH, pname, '-dpng', '-r300');
+   end
 end
 
 if nargout
