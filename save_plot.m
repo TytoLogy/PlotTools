@@ -1,6 +1,6 @@
-function varargout = save_plot(figH, outputFormat, outputPath)
+function varargout = save_plot(figH, outputFormat, outputPath, varargin)
 %------------------------------------------------------------------------
-% figH = save_plot(figH, outputFormat, outputPath)
+% figH = save_plot(figH, outputFormat, outputPath, <<plot options>>)
 %------------------------------------------------------------------------
 % TytoLogy:PlotTools Toolbox
 %------------------------------------------------------------------------
@@ -40,8 +40,11 @@ function varargout = save_plot(figH, outputFormat, outputPath)
 % TO DO:
 %------------------------------------------------------------------------
 
+% default resolution
+png_resolution = 600;
+
 % check inputs
-if nargin ~= 3
+if nargin < 3
 	error('save_plot: need 3 input args, fig handle, format and path');
 end
 
@@ -61,6 +64,15 @@ end
 
 % get figure name from handle and append to output path
 pname = fullfile(outputPath, get(figH, 'Name'));
+% if Name is empty, try getting name from outputPath
+if isempty(pname)
+   warning('%s: figure Name is empty, trying name from outputPath', ...
+               mfilename);
+   [~, pname] = fileparts(outputPath);
+   if isempty(pname)
+      error('%s: cannot set file name', mfilename);
+   end
+end
 
 % save plot in desired format(s)
 for s = 1:length(outputFormat)
@@ -70,7 +82,11 @@ for s = 1:length(outputFormat)
 	   case 'PDF'
 		   print(figH, pname, '-dpdf');
 	   case 'PNG'
-		   print(figH, pname, '-dpng', '-r300');
+         if isempty(varargin)
+            print(figH, '-dpng', sprintf('-r%d', png_resolution), pname);
+         else
+            print(figH, '-dpng', pname, varargin{:});
+         end            
    end
 end
 
