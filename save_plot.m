@@ -16,9 +16,10 @@ function varargout = save_plot(figH, outputFormat, outputPath, varargin)
 % Input Arguments:
 % 	figH	figure handle
 %	outputFormat	output format for plot.
-% 				'PNG'		.png, 300 dpi resolution
-% 				'PDF'		.pdf
-% 				'FIG'		.fig (saves MATLAB figure)
+% 				'PNG'		      .png, 300 dpi resolution
+% 				'PDF'		      .pdf
+%           'PDF_EXPORT'   .pdf, using exportgraphics()
+% 				'FIG'		      .fig (saves MATLAB figure)
 %  outputpath	output directory
 %
 % Output Arguments:
@@ -36,6 +37,7 @@ function varargout = save_plot(figH, outputFormat, outputPath, varargin)
 %
 % Revisions:
 % 9 July 2020 (SJS): moved to PlotTools toolbox
+% 2 Dec 2022 (SJS): added pdf_export option
 %------------------------------------------------------------------------
 % TO DO:
 %------------------------------------------------------------------------
@@ -57,7 +59,7 @@ end
 
 % if format is invalid, throw error
 for s = 1:length(outputFormat)
-   if ~any(strcmpi(outputFormat{s}, {'PNG', 'PDF', 'FIG'}))
+   if ~any(strcmpi(outputFormat{s}, {'PNG', 'PDF', 'PDF-EXPORT', 'FIG'}))
    	error('save_plot: unknown save format %s', outputFormat{s});
    end
 end
@@ -81,6 +83,8 @@ for s = 1:length(outputFormat)
 		   savefig(figH, pname, 'compact');
 	   case 'PDF'
 		   print(figH, pname, '-dpdf');
+      case 'PDF-EXPORT'
+         exportgraphics(figH, [pname '.pdf'], 'ContentType', 'vector'); 
 	   case 'PNG'
          if isempty(varargin)
             print(figH, '-dpng', sprintf('-r%d', png_resolution), pname);
