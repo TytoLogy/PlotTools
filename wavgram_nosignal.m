@@ -1,8 +1,10 @@
-function varargout = wavgram_nosignal(x, n, Fs, window, overlap, maxfreq, lowdBlimit)
+function varargout = wavgram_nosignal(x, n, Fs, window, overlap, ...
+                                          maxfreq, lowdBlimit)
 % plot spectrograms
 %  Original version myspecgram() by Paul Kienzle; 
 %  modified by Sean Fulop March 2002
 %  modified by Sharad Shanbhag Jan 2021
+% 3 Jan 2023 (SJS): removed subplot
 
 
 % if only the window length is given, generate hanning window
@@ -68,7 +70,7 @@ STFTmag = max(STFTmag, 10^(lowdBlimit/10));
 % H(1) = 0;
 
 % Plot Spectrogram
-subplot(211);
+% subplot(211);
 pcolor(1000*t, 0.001*f(spts), 20*log10(STFTmag));
 axis xy;
 % Grey colormap
